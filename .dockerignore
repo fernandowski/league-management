@@ -1,0 +1,6 @@
+./.idea
+./tmp
+./league-management.iml
+/.dockerignore
+./docker-compose.yml
+./Dockerfile
