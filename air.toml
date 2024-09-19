@@ -1,0 +1,16 @@
+# Set the root directory to watch
+root = "."
+tmp_dir = "tmp"
+
+# Configure the build process
+[build]
+cmd = "mkdir -p ./tmp && chmod 777 ./tmp && go build -buildvcs=false -o ./tmp/main . || echo 'Build failed'"
+bin = "./tmp/main"
+# poll = true
+log = "air.log"
+full_bin = "APP_ENV=dev ./tmp/main"
+
+[log]
+color = true
+time = true
+level = "debug

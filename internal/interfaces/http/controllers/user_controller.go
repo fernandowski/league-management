@@ -15,5 +15,5 @@ func NewUserController(us *service.UserService) UserController {
 
 func (uc *UserController) Register(ctx iris.Context) {
 	ctx.StatusCode(iris.StatusOK)
-	ctx.JSON(iris.Map{"message": "User registered successfully!"})
+	ctx.JSON(iris.Map{"message": "fernando"})
 }
