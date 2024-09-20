@@ -11,7 +11,12 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - AIR_ENV=development
+      AIR_ENV: development
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: league
+      POSTGRES_DB_SCHEMA: league_management
+      DB_CONNECTION_STRING: postgres://root:root@localhost:5432/league?sslmode=disable
     command: air
     networks:
       - app-network
