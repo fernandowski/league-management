@@ -13,11 +13,36 @@ services:
     environment:
       - AIR_ENV=development
     command: air
+    networks:
+      - app-network
+    depends_on:
+      - db
+    restart: always
 
-  prod:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: prod
+#  prod:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#      target: prod
+#    ports:
+#      - "8080:8080"
+
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: postgres
     ports:
-      - "8080:8080"
+      - '5432:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+volumes:
+  db_data:
+
+networks:
+  app-network:
