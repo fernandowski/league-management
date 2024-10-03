@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"github.com/iris-contrib/middleware/cors"
 	"github.com/kataras/iris/v12"
 	"league-management/internal/application/service"
 	"league-management/internal/interfaces/http/controllers"
+	"log"
 )
 
 func registerV1API(app *iris.Application) {
@@ -32,15 +32,26 @@ func loginEndpoint(ctx iris.Context) {
 func Initialize() *iris.Application {
 	app := iris.New()
 
-	app.Use(iris.Compression)
+	crs := func(ctx iris.Context) {
+		ctx.Header("Access-Control-Allow-Origin", "http://localhost:8081")
+		ctx.Header("Access-Control-Allow-Credentials", "true")
 
-	crs := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:8081"},                   // Specify the origin explicitly
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Specify allowed methods
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},           // Specify allowed headers
-		AllowCredentials: true,                                                // Allow credentials
-	})
+		if ctx.Method() == iris.MethodOptions {
+			ctx.Header("Access-Control-Methods", "POST, PUT, PATCH, DELETE")
+			ctx.Header("Access-Control-Allow-Headers", "Access-Control-Allow-Origin,Content-Type")
+			ctx.Header("Access-Control-Max-Age", "86400")
+			ctx.StatusCode(iris.StatusNoContent)
+			return
+		}
+
+		log.Print("here")
+
+		ctx.Next()
+	} // or	"github.com/iris-contrib/middleware/cors"
+
 	app.UseRouter(crs)
+
+	app.Use(iris.Compression)
 
 	registerV1API(app)
 
