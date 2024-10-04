@@ -1,10 +1,12 @@
 package service
 
 import (
+	"errors"
 	"github.com/google/uuid"
 	domain "league-management/internal/domain/user"
 	"league-management/internal/infrastructure/crypto"
 	pg "league-management/internal/infrastructure/repositories/postgres"
+	"log"
 )
 
 type UserService struct {
@@ -15,6 +17,13 @@ func NewUserService() *UserService {
 }
 
 func (us *UserService) RegisterUser(email string, password string) (*domain.User, error) {
+
+	var user = pg.FindById(email)
+	log.Print(user)
+	if user != nil {
+		return nil, errors.New("email is taken")
+	}
+
 	newUserId := uuid.New().String()
 
 	newUser, userError := domain.NewUser(newUserId, email, password)
