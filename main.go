@@ -1,7 +1,7 @@
 package main
 
 import (
-	"league-management/internal/user_management/interfaces/http"
+	routes "league-management/internal/user_management/interfaces/http"
 	"log"
 )
 
