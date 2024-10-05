@@ -22,6 +22,7 @@ func initUserRouter(router iris.Party, uc controllers.UserController) {
 	userRouter := router.Party("/user")
 	{
 		userRouter.Post("/register", uc.Register)
+		userRouter.Post("/login", uc.Login)
 	}
 }
 

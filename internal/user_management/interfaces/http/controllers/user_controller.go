@@ -11,7 +11,12 @@ type UserController struct {
 	userService *service.UserService
 }
 
-type userRequest struct {
+type userRegistrationDto struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type userLoginRequestDto struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -22,7 +27,7 @@ func NewUserController(us *service.UserService) UserController {
 
 func (uc *UserController) Register(ctx iris.Context) {
 
-	var body userRequest
+	var body userRegistrationDto
 	err := ctx.ReadJSON(&body)
 
 	createdUser, err := uc.userService.RegisterUser(body.Email, body.Password)
@@ -35,4 +40,21 @@ func (uc *UserController) Register(ctx iris.Context) {
 
 	userDto := dto.FromDomain(createdUser)
 	ctx.JSON(userDto)
+}
+
+func (uc *UserController) Login(ctx iris.Context) {
+	var body userLoginRequestDto
+	err := ctx.ReadJSON(&body)
+
+	jwt, err := uc.userService.Login(body.Email, body.Password)
+	if err != nil {
+		log.Print(err)
+		ctx.StatusCode(iris.StatusConflict)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(iris.Map{
+		"jwt": jwt,
+	})
 }

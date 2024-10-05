@@ -21,14 +21,15 @@ func Save(u *domain.User) error {
 	return err
 }
 
-func FindById(emailAddress string) *domain.User {
+func FindByEmail(emailAddress string) *domain.User {
 	pool := GetConnection()
 
-	sql := "SELECT email FROM league_management.users where email=$1"
+	sql := "SELECT email, password FROM league_management.users where email=$1"
 
 	var email string
+	var password string
 
-	err := pool.QueryRow(context.Background(), sql, emailAddress).Scan(&email)
+	err := pool.QueryRow(context.Background(), sql, emailAddress).Scan(&email, &password)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -37,5 +38,5 @@ func FindById(emailAddress string) *domain.User {
 		panic(err)
 	}
 
-	return &domain.User{Email: email}
+	return &domain.User{Email: email, PasswordHash: password}
 }
