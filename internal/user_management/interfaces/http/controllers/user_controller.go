@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"github.com/kataras/iris/v12"
-	"league-management/internal/application/service"
-	"league-management/internal/infrastructure/dto"
+	"league-management/internal/user_management/application/service"
+	"league-management/internal/user_management/infrastructure/dto"
 	"log"
 )
 

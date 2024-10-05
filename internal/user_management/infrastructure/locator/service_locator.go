@@ -2,7 +2,7 @@ package locator
 
 import (
 	"database/sql"
-	"league-management/internal/application/service"
+	"league-management/internal/user_management/application/service"
 )
 
 type ServiceLocator struct {

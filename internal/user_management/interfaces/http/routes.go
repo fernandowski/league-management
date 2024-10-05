@@ -2,8 +2,8 @@ package routes
 
 import (
 	"github.com/kataras/iris/v12"
-	"league-management/internal/application/service"
-	"league-management/internal/interfaces/http/controllers"
+	"league-management/internal/user_management/application/service"
+	"league-management/internal/user_management/interfaces/http/controllers"
 	"log"
 )
 

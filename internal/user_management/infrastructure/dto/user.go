@@ -1,6 +1,8 @@
 package dto
 
-import domain "league-management/internal/domain/user"
+import (
+	"league-management/internal/user_management/domain/user"
+)
 
 type UserDto struct {
 	Id    string `json:"id"`

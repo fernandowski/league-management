@@ -3,9 +3,9 @@ package service
 import (
 	"errors"
 	"github.com/google/uuid"
-	domain "league-management/internal/domain/user"
-	"league-management/internal/infrastructure/crypto"
-	pg "league-management/internal/infrastructure/repositories/postgres"
+	"league-management/internal/user_management/domain/user"
+	"league-management/internal/user_management/infrastructure/crypto"
+	"league-management/internal/user_management/infrastructure/repositories/postgres"
 	"log"
 )
 
