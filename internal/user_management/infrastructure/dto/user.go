@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"league-management/internal/user_management/internal/domain/user"
+	"league-management/internal/user_management/domain/user"
 )
 
 type UserDto struct {

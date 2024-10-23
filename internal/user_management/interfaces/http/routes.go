@@ -19,7 +19,7 @@ func initRoutes(router iris.Party) {
 }
 
 func initUserRouter(router iris.Party, uc controllers.UserController) {
-	userRouter := router.Party("/user")
+	userRouter := router.Party("/user", authorizationMiddleWare)
 	{
 		userRouter.Post("/register", uc.Register)
 		userRouter.Post("/login", uc.Login)
@@ -28,6 +28,11 @@ func initUserRouter(router iris.Party, uc controllers.UserController) {
 
 func loginEndpoint(ctx iris.Context) {
 	ctx.WriteString("Login Endpoint")
+}
+
+func authorizationMiddleWare(ctx iris.Context) {
+
+	ctx.Next()
 }
 
 func Initialize() *iris.Application {

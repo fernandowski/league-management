@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
-	"league-management/internal/user_management/internal/domain/user"
+	"league-management/internal/user_management/domain/user"
 	"log"
 )
 

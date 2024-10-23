@@ -2,12 +2,10 @@ package service
 
 import (
 	"errors"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"league-management/internal/user_management/internal/domain/user"
-	"league-management/internal/user_management/internal/infrastructure/crypto"
-	"league-management/internal/user_management/internal/infrastructure/repositories/postgres"
-	"time"
+	"league-management/internal/user_management/domain/user"
+	"league-management/internal/user_management/infrastructure/crypto"
+	"league-management/internal/user_management/infrastructure/repositories/postgres"
 )
 
 type UserService struct {
@@ -60,17 +58,9 @@ func (us *UserService) Login(email string, password string) (string, error) {
 		return "", errors.New("invalid user name or password")
 	}
 
-	var jwtKey = []byte("my_secret_key")
+	service := NewAuthService()
+	signedToken, err := service.GenerateJWT(existingUser)
 
-	var claims = jwt.MapClaims{
-		"authorized": true,
-		"user_email": existingUser.Email,
-		"exp":        time.Now().Add(time.Minute * 15).Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	signedToken, err := token.SignedString(jwtKey)
 	if err != nil {
 		return "", err
 	}
