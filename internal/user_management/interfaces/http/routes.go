@@ -15,14 +15,25 @@ func registerV1API(app *iris.Application) {
 func initRoutes(router iris.Party) {
 	userService := service.NewUserService()
 	userController := controllers.NewUserController(userService)
+
 	initUserRouter(router, userController)
+	initOrganizationRouter(router)
 }
 
 func initUserRouter(router iris.Party, uc controllers.UserController) {
-	userRouter := router.Party("/user", authorizationMiddleWare)
+	userRouter := router.Party("/user")
 	{
 		userRouter.Post("/register", uc.Register)
 		userRouter.Post("/login", uc.Login)
+	}
+}
+
+func initOrganizationRouter(router iris.Party) {
+
+	var organizationController = controllers.NewOrganizationController()
+	var organizationRouter = router.Party("/organizations", authorizationMiddleWare)
+	{
+		organizationRouter.Get("/", organizationController.FetchOrganizations)
 	}
 }
 
@@ -31,6 +42,28 @@ func loginEndpoint(ctx iris.Context) {
 }
 
 func authorizationMiddleWare(ctx iris.Context) {
+	type authorizationHeader struct {
+		JWT string `header:"auth, required"`
+	}
+
+	var headers authorizationHeader
+	if err := ctx.ReadHeaders(&headers); err != nil {
+		ctx.StopExecution()
+		return
+	}
+
+	log.Print(headers.JWT)
+	var authorizationService = service.NewAuthService()
+
+	claims, err := authorizationService.ValidateJWT(headers.JWT)
+
+	if err != nil {
+		ctx.StatusCode(iris.StatusUnauthorized)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	log.Print(claims)
 
 	ctx.Next()
 }
