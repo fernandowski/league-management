@@ -19,6 +19,7 @@ func (as *AuthService) GenerateJWT(user *domain.User) (string, error) {
 	var claims = jwt.MapClaims{
 		"authorized": true,
 		"user_email": user.Email,
+		"user_id":    user.Id,
 		"exp":        time.Now().Add(time.Minute * 15).Unix(),
 	}
 

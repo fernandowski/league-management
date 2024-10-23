@@ -15,9 +15,11 @@ func NewUserService() *UserService {
 	return &UserService{}
 }
 
+var userRepository = pg.NewUserRepository()
+
 func (us *UserService) RegisterUser(email string, password string) (*domain.User, error) {
 
-	var user = pg.FindByEmail(email)
+	var user = userRepository.FindByEmail(email)
 
 	if user != nil {
 		return nil, errors.New("email is taken")
@@ -39,7 +41,7 @@ func (us *UserService) RegisterUser(email string, password string) (*domain.User
 
 	newUser.PasswordHash = hash
 
-	err := pg.Save(newUser)
+	err := userRepository.Save(newUser)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +50,7 @@ func (us *UserService) RegisterUser(email string, password string) (*domain.User
 }
 
 func (us *UserService) Login(email string, password string) (string, error) {
-	var existingUser = pg.FindByEmail(email)
+	var existingUser = userRepository.FindByEmail(email)
 
 	if existingUser == nil {
 		return "", errors.New("invalid user name or password")

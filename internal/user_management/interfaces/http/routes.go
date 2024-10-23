@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/kataras/iris/v12"
 	"league-management/internal/user_management/application/service"
+	pg "league-management/internal/user_management/infrastructure/repositories/postgres"
 	"league-management/internal/user_management/interfaces/http/controllers"
 	"log"
 )
@@ -52,7 +53,6 @@ func authorizationMiddleWare(ctx iris.Context) {
 		return
 	}
 
-	log.Print(headers.JWT)
 	var authorizationService = service.NewAuthService()
 
 	claims, err := authorizationService.ValidateJWT(headers.JWT)
@@ -63,8 +63,16 @@ func authorizationMiddleWare(ctx iris.Context) {
 		return
 	}
 
-	log.Print(claims)
+	var userRepository = pg.NewUserRepository()
+	user, err := userRepository.FindById(claims["user_id"].(string))
 
+	if err != nil {
+		ctx.StatusCode(iris.StatusUnauthorized)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	ctx.Values().Set("user", user)
 	ctx.Next()
 }
 
