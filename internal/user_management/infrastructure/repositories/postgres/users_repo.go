@@ -4,14 +4,19 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"league-management/internal/shared/database"
 	"league-management/internal/user_management/domain/user"
 	"log"
 )
 
 type UserRepository struct{}
 
+func NewUserRepository() *UserRepository {
+	return &UserRepository{}
+}
+
 func (ur *UserRepository) Save(u *domain.User) error {
-	pool := GetConnection()
+	pool := database.GetConnection()
 
 	sql := "INSERT INTO league_management.users (email, password) VALUES ($1, $2)"
 
@@ -23,12 +28,8 @@ func (ur *UserRepository) Save(u *domain.User) error {
 	return err
 }
 
-func NewUserRepository() *UserRepository {
-	return &UserRepository{}
-}
-
 func (ur *UserRepository) FindByEmail(emailAddress string) *domain.User {
-	pool := GetConnection()
+	pool := database.GetConnection()
 
 	sql := "SELECT id, email, password FROM league_management.users where email=$1"
 
@@ -49,7 +50,7 @@ func (ur *UserRepository) FindByEmail(emailAddress string) *domain.User {
 }
 
 func (ur *UserRepository) FindById(userId string) (*domain.User, error) {
-	var pool = GetConnection()
+	var pool = database.GetConnection()
 
 	var sql = "SELECT id, email FROM league_management.users where id=$1"
 

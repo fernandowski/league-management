@@ -35,6 +35,7 @@ func initOrganizationRouter(router iris.Party) {
 	var organizationRouter = router.Party("/organizations", authorizationMiddleWare)
 	{
 		organizationRouter.Get("/", organizationController.FetchOrganizations)
+		organizationRouter.Post("/", organizationController.AddOrganization)
 	}
 }
 

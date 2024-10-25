@@ -45,6 +45,11 @@ func (uc *UserController) Register(ctx iris.Context) {
 func (uc *UserController) Login(ctx iris.Context) {
 	var body userLoginRequestDto
 	err := ctx.ReadJSON(&body)
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
 
 	jwt, err := uc.userService.Login(body.Email, body.Password)
 	if err != nil {

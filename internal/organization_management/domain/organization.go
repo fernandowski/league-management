@@ -2,11 +2,13 @@ package domain
 
 type Organization struct {
 	ID                  string
-	name                string
+	Name                string
 	slug                string
 	OrganizationOwnerId string
+	DateCreated         string
+	DateUpdated         string
 }
 
-func NewOrganization(id string, name string, ownerId string) Organization {
-	return Organization{ID: id, name: name, OrganizationOwnerId: ownerId}
+func NewOrganization(name string, ownerId string) Organization {
+	return Organization{Name: name, OrganizationOwnerId: ownerId}
 }
