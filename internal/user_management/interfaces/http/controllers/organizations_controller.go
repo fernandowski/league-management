@@ -20,10 +20,50 @@ type organizationRequestDto struct {
 	Name string `json:"name"`
 }
 
+type organizationResponseDto struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func toOrganizationDto(organization domain.Organization) organizationResponseDto {
+	return organizationResponseDto{
+		Id:   organization.ID,
+		Name: organization.Name,
+	}
+}
+func organizationToRequestResponse(organizations []domain.Organization) []organizationResponseDto {
+	dto := make([]organizationResponseDto, len(organizations))
+
+	for i, organization := range organizations {
+		dto[i] = toOrganizationDto(organization)
+	}
+
+	return dto
+}
+
 func (oc *OrganizationsController) FetchOrganizations(ctx iris.Context) {
-	log.Println("organizations?")
-	result := []domain.Organization{}
-	ctx.JSON(result)
+
+	value := ctx.Values().Get("user")
+	authenticatedUser, ok := value.(*domain2.User)
+
+	log.Print(value, authenticatedUser, ok)
+
+	// TODO: If repeated again will create abstraction.
+	if !ok {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "No Authentication"})
+		return
+	}
+
+	organizations, err := organizationService.FetchOrganizations(authenticatedUser.Id)
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	// TODO: We will need utility functions to always include data and status ok for now.
+	ctx.JSON(organizationToRequestResponse(organizations))
 }
 
 func (oc *OrganizationsController) AddOrganization(ctx iris.Context) {
@@ -38,8 +78,6 @@ func (oc *OrganizationsController) AddOrganization(ctx iris.Context) {
 
 	value := ctx.Values().Get("user")
 	authenticatedUser, ok := value.(*domain2.User)
-
-	log.Print(value, authenticatedUser, ok)
 
 	if !ok {
 		ctx.StatusCode(iris.StatusBadRequest)

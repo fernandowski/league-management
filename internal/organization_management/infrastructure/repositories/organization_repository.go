@@ -77,3 +77,34 @@ func (ur *OrganizationRepository) Save(o *domain.Organization) error {
 
 	return err
 }
+
+func (ur *OrganizationRepository) FetchAll(orgOwnerId string) ([]domain.Organization, error) {
+	pool := database.GetConnection()
+	sql := "SELECT id, name, user_id FROM league_management.organizations where user_id=$1"
+
+	rows, err := pool.Query(context.Background(), sql, orgOwnerId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var organizations []domain.Organization
+
+	for rows.Next() {
+		var organization domain.Organization
+
+		if err := rows.Scan(&organization.ID, &organization.Name, &organization.OrganizationOwnerId); err != nil {
+			return nil, err
+		}
+
+		organizations = append(organizations, organization)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return organizations, nil
+}
