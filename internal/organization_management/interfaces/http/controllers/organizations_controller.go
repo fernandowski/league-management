@@ -5,7 +5,6 @@ import (
 	"league-management/internal/organization_management/application/services"
 	"league-management/internal/organization_management/domain"
 	domain2 "league-management/internal/user_management/domain/user"
-	"log"
 )
 
 var organizationService = services.NewOrganizationService()
@@ -45,8 +44,6 @@ func (oc *OrganizationsController) FetchOrganizations(ctx iris.Context) {
 
 	value := ctx.Values().Get("user")
 	authenticatedUser, ok := value.(*domain2.User)
-
-	log.Print(value, authenticatedUser, ok)
 
 	// TODO: If repeated again will create abstraction.
 	if !ok {
