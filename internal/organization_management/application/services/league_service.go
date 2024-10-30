@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-	"league-management/internal/organization_management/domain"
+	"league-management/internal/organization_management/domain/domainservices"
 	"league-management/internal/organization_management/infrastructure/repositories"
 )
 
@@ -15,7 +15,6 @@ func NewLeagueService() *LeagueService {
 var leagueRepository = repositories.NewLeagueRepository()
 
 func (ls *LeagueService) Provision(ownerId string, organizationId string, leagueName string) error {
-	organization, err := organizationRepo.FindById(organizationId)
 
 	user, _ := userRepo.FindById(ownerId)
 
@@ -23,21 +22,14 @@ func (ls *LeagueService) Provision(ownerId string, organizationId string, league
 		return errors.New("user does not exist")
 	}
 
+	provisionLeagueService := domainservices.NewProvisionLeagueService()
+	newLeague, err := provisionLeagueService.CanProvisionLeague(ownerId, organizationId, leagueName)
+
 	if err != nil {
 		return err
 	}
 
-	if !organization.IsInGoodStanding() {
-		return errors.New("organization Not in good state")
-	}
-
-	if !organization.BelongsToOwner(ownerId) {
-		return errors.New("cannot provision league")
-	}
-
-	newLeague := domain.NewLeague(leagueName, ownerId, organizationId)
-
-	err = leagueRepository.Save(&newLeague)
+	err = leagueRepository.Save(newLeague)
 
 	if err != nil {
 		return err
