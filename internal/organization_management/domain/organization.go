@@ -20,7 +20,7 @@ func (o *Organization) isInGoodStanding() bool {
 	return o.isActive
 }
 
-func (o *Organization) belongsToOwner(ownerId string) bool {
+func (o *Organization) BelongsToOwner(ownerId string) bool {
 	return o.OrganizationOwnerId == ownerId
 }
 
@@ -30,7 +30,7 @@ func (o *Organization) CanAcceptANewLeague(ownerId string) error {
 		return errors.New("league not in good standing")
 	}
 
-	if !o.belongsToOwner(ownerId) {
+	if !o.BelongsToOwner(ownerId) {
 		return errors.New("not allowed to add league")
 	}
 

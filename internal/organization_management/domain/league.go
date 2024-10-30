@@ -1,15 +1,15 @@
 package domain
 
 type League struct {
-	Id             string
+	Id             *string
 	Name           string
 	OwnerId        string
 	OrganizationId string
 	TeamIds        []string
 }
 
-func NewLeague(name string, ownerId string, organizationId string) League {
+func NewLeague(id string, name string, ownerId string, organizationId string) League {
 	return League{
-		Name: name, OwnerId: ownerId, OrganizationId: organizationId, TeamIds: []string{},
+		Id: &id, Name: name, OwnerId: ownerId, OrganizationId: organizationId, TeamIds: []string{},
 	}
 }

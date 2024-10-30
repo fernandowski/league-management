@@ -40,7 +40,7 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 	}
 
 	return &domain.League{
-		Id:             id,
+		Id:             nil,
 		Name:           name,
 		OwnerId:        ownerId,
 		OrganizationId: organizationId,
@@ -60,4 +60,43 @@ func (lr *LeagueRepository) Save(league *domain.League) error {
 	}
 
 	return err
+}
+
+func (lr *LeagueRepository) FetchAll(organizationId string) ([]domain.League, error) {
+	connection := database.GetConnection()
+
+	sql := "SELECT " +
+		"league_management.leagues.id," +
+		"league_management.leagues.name," +
+		"league_management.leagues.user_id," +
+		"league_management.leagues.organization_id " +
+		"FROM league_management.leagues " +
+		"JOIN league_management.organizations ON league_management.organizations.id = league_management.leagues.organization_id " +
+		"WHERE league_management.organizations.id =$1"
+
+	rows, err := connection.Query(context.Background(), sql, organizationId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var leagues []domain.League
+
+	for rows.Next() {
+		var id, name, userId, organizationId string
+
+		if err := rows.Scan(&id, &name, &userId, &organizationId); err != nil {
+			return nil, err
+		}
+
+		league := domain.NewLeague(id, name, userId, organizationId)
+
+		leagues = append(leagues, league)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return leagues, nil
 }

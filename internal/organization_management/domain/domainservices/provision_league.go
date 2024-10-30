@@ -26,7 +26,7 @@ func (pls *ProvisionLeagueService) CanProvisionLeague(ownerId string, organizati
 		return nil, err
 	}
 
-	newLeague := domain.NewLeague(leagueName, ownerId, organizationId)
+	newLeague := domain.NewLeague("", leagueName, ownerId, organizationId)
 
 	return &newLeague, nil
 }
