@@ -17,3 +17,7 @@ func NewOrganization(id *string, name string, ownerId string, isActive bool) Org
 func (o *Organization) IsInGoodStanding() bool {
 	return o.isActive
 }
+
+func (o *Organization) BelongsToOwner(ownerId string) bool {
+	return o.OrganizationOwnerId == ownerId
+}
