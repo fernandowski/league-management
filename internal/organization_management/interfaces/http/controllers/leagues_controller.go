@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/kataras/iris/v12"
 	"league-management/internal/organization_management/application/services"
+	"league-management/internal/organization_management/domain"
 	domain2 "league-management/internal/user_management/domain/user"
 	"log"
 )
@@ -18,6 +19,29 @@ type leagueCreateDTO struct {
 
 type leagueSearchQueryDTO struct {
 	OrganizationId string `json:"organization_id"`
+}
+
+type leagueResponseDto struct {
+	Id      string   `json:"id"`
+	Name    string   `json:"name"`
+	TeamIds []string `json:"team_ids"`
+}
+
+func toLeagueSearchQueryDto(league domain.League) leagueResponseDto {
+	return leagueResponseDto{
+		Id:      *league.Id,
+		Name:    league.Name,
+		TeamIds: league.TeamIds,
+	}
+}
+
+func leaguesToRequestResponse(leagues []domain.League) []leagueResponseDto {
+	dto := make([]leagueResponseDto, len(leagues))
+
+	for i, league := range leagues {
+		dto[i] = toLeagueSearchQueryDto(league)
+	}
+	return dto
 }
 
 func NewLeaguesController() *LeaguesController {
@@ -82,5 +106,5 @@ func (lc *LeaguesController) FetchLeagues(ctx iris.Context) {
 		return
 	}
 
-	ctx.JSON(leagues)
+	ctx.JSON(leaguesToRequestResponse(leagues))
 }
