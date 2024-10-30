@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/kataras/iris/v12"
+	controllers2 "league-management/internal/organization_management/interfaces/http/controllers"
 	"league-management/internal/user_management/application/service"
 	pg "league-management/internal/user_management/infrastructure/repositories/postgres"
 	"league-management/internal/user_management/interfaces/http/controllers"
@@ -19,6 +20,7 @@ func initRoutes(router iris.Party) {
 
 	initUserRouter(router, userController)
 	initOrganizationRouter(router)
+	initLeaguesRouter(router)
 }
 
 func initUserRouter(router iris.Party, uc controllers.UserController) {
@@ -31,11 +33,19 @@ func initUserRouter(router iris.Party, uc controllers.UserController) {
 
 func initOrganizationRouter(router iris.Party) {
 
-	var organizationController = controllers.NewOrganizationController()
+	var organizationController = controllers2.NewOrganizationController()
 	var organizationRouter = router.Party("/organizations", authorizationMiddleWare)
 	{
 		organizationRouter.Get("/", organizationController.FetchOrganizations)
 		organizationRouter.Post("/", organizationController.AddOrganization)
+	}
+}
+
+func initLeaguesRouter(router iris.Party) {
+	var leaguesController = controllers2.NewLeaguesController()
+	var leaguesRouter = router.Party("/leagues", authorizationMiddleWare)
+	{
+		leaguesRouter.Post("/", leaguesController.CreateLeague)
 	}
 }
 

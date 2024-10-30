@@ -51,7 +51,7 @@ func (or *OrganizationRepository) FindById(orgId string) (*domain.Organization, 
 
 	sql := "SELECT id, name, user_id, created_at, updated_at FROM league_management.organizations where id=$1"
 
-	err := connection.QueryRow(context.Background(), sql, orgId).Scan(id, name, ownerId, dateCreated, dateUpdated)
+	err := connection.QueryRow(context.Background(), sql, orgId).Scan(&id, &name, &ownerId, &dateCreated, &dateUpdated)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
