@@ -48,7 +48,7 @@ func (os *OrganizationService) OpenNewOrganization(organizationOwner string, org
 		return errors.New("organization already exists with name")
 	}
 
-	organization := domain.NewOrganization(orgName, organizationOwner)
+	organization := domain.NewOrganization(nil, orgName, organizationOwner, true)
 
 	err := organizationRepo.Save(&organization)
 	if err != nil {

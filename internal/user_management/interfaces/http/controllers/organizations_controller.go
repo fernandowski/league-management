@@ -27,7 +27,7 @@ type organizationResponseDto struct {
 
 func toOrganizationDto(organization domain.Organization) organizationResponseDto {
 	return organizationResponseDto{
-		Id:   organization.ID,
+		Id:   *organization.ID,
 		Name: organization.Name,
 	}
 }

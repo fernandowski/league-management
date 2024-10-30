@@ -20,8 +20,6 @@ func NewOrganizationRepository() *OrganizationRepository {
 func (or *OrganizationRepository) FindByName(orgName string, ownerID string) (*domain.Organization, error) {
 	connection := database.GetConnection()
 
-	log.Print(orgName, ownerID)
-
 	sql := "SELECT id, name, user_id, created_at, updated_at FROM league_management.organizations where name=$1 AND user_id=$2"
 
 	var id string
@@ -39,7 +37,7 @@ func (or *OrganizationRepository) FindByName(orgName string, ownerID string) (*d
 		panic(err)
 	}
 
-	return &domain.Organization{Name: name, ID: id, OrganizationOwnerId: ownerId}, nil
+	return &domain.Organization{Name: name, ID: &id, OrganizationOwnerId: ownerId}, nil
 }
 
 func (or *OrganizationRepository) FindById(orgId string) (*domain.Organization, error) {
@@ -62,7 +60,8 @@ func (or *OrganizationRepository) FindById(orgId string) (*domain.Organization, 
 		panic(err)
 	}
 
-	return &domain.Organization{Name: name, ID: id, OrganizationOwnerId: ownerId}, nil
+	organization := domain.NewOrganization(&id, name, ownerId, true)
+	return &organization, nil
 }
 
 func (ur *OrganizationRepository) Save(o *domain.Organization) error {
@@ -93,12 +92,14 @@ func (ur *OrganizationRepository) FetchAll(orgOwnerId string) ([]domain.Organiza
 	var organizations []domain.Organization
 
 	for rows.Next() {
-		var organization domain.Organization
+		var id, name, organizationOwnerId string
+		var isActive bool
 
-		if err := rows.Scan(&organization.ID, &organization.Name, &organization.OrganizationOwnerId); err != nil {
+		if err := rows.Scan(&id, &name, &organizationOwnerId); err != nil {
 			return nil, err
 		}
 
+		organization := domain.NewOrganization(&id, name, organizationOwnerId, isActive)
 		organizations = append(organizations, organization)
 	}
 
