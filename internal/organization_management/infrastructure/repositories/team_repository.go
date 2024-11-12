@@ -27,6 +27,14 @@ func (tr *TeamRepository) Save(team *domain.Team) error {
 		panic(err.Error())
 	}
 
+	sql = "INSERT INTO league_management.organization_teams (organization_id, team_id) VALUES ($1, $2)"
+
+	_, err = connection.Exec(context.Background(), sql, team.OrganizationId, newTeamId)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
 	if len(team.Roles) > 0 {
 		upsertTeamOwners(newTeamId, team.Roles)
 	}
@@ -44,9 +52,9 @@ func upsertTeamOwners(teamId string, owners map[string]domain.Role) {
 		index++
 	}
 
-	sql := "INSERT INTO league_management.team_user_role (team_id, user_id, role) VALUES " +
+	sql := "INSERT INTO league_management.team_user_roles (team_id, user_id, role) VALUES " +
 		strings.Join(values, ",") +
-		"ON CONFLICT DO NOTHING"
+		"ON CONFLICT (team_id, user_id, role) DO NOTHING"
 
 	connection := database.GetConnection()
 
