@@ -19,16 +19,33 @@ const (
 )
 
 type Team struct {
-	ID      *TeamId
-	Name    TeamName
-	members TeamMembers
-	Roles   map[string]Role
+	ID             *TeamId
+	Name           TeamName
+	members        TeamMembers
+	Roles          map[string]Role
+	OrganizationId string
 }
 
-func NewTeam(name TeamName, ownerId string) (*Team, error) {
+func NewTeamWithOwner(name TeamName, organizationId string, ownerId string) (*Team, error) {
 	if strings.TrimSpace(string(name)) == "" {
 		return nil, errors.New("name cannot be empty")
 	}
 
-	return &Team{ID: nil, Name: name, Roles: map[string]Role{ownerId: RoleOwner}}, nil
+	if strings.TrimSpace(string(organizationId)) == "" {
+		return nil, errors.New("organization cannot be empty")
+	}
+
+	return &Team{ID: nil, Name: name, OrganizationId: organizationId, Roles: map[string]Role{ownerId: RoleOwner}}, nil
+}
+
+func NewTeamWithoutOwner(name TeamName, organizationId string) (*Team, error) {
+	if strings.TrimSpace(string(name)) == "" {
+		return nil, errors.New("name cannot be empty")
+	}
+
+	if strings.TrimSpace(organizationId) == "" {
+		return nil, errors.New("organization cannot be empty")
+	}
+
+	return &Team{ID: nil, Name: name, OrganizationId: organizationId}, nil
 }

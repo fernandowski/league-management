@@ -21,6 +21,7 @@ func initRoutes(router iris.Party) {
 	initUserRouter(router, userController)
 	initOrganizationRouter(router)
 	initLeaguesRouter(router)
+	initTeamsRouter(router)
 }
 
 func initUserRouter(router iris.Party, uc controllers.UserController) {
@@ -47,6 +48,15 @@ func initLeaguesRouter(router iris.Party) {
 	{
 		leaguesRouter.Post("/", leaguesController.CreateLeague)
 		leaguesRouter.Get("/", leaguesController.FetchLeagues)
+	}
+}
+
+func initTeamsRouter(router iris.Party) {
+	var teamsController = controllers2.NewTeamsController()
+	var leaguesRouter = router.Party("/teams", authorizationMiddleWare)
+	{
+		leaguesRouter.Post("/", teamsController.MakeTeam)
+		// leaguesRouter.Get("/", leaguesController.FetchLeagues)
 	}
 }
 
