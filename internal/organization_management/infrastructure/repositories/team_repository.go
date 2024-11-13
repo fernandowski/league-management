@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
+	"log"
 	"strings"
 )
 
@@ -40,6 +41,43 @@ func (tr *TeamRepository) Save(team *domain.Team) error {
 	}
 
 	return err
+}
+
+func (tr *TeamRepository) FetchAll(organizationId string, userId string) []interface{} {
+	connection := database.GetConnection()
+
+	sql := "SELECT teams.id, teams.name, organizations.name as organization_name " +
+		"FROM organization_teams " +
+		"JOIN organizations ON organizations.id = organization_teams.organization_id " +
+		"JOIN teams on teams.id = organization_teams.team_id " +
+		"WHERE organization_teams.organization_id=$1 AND organizations.user_id= $2 "
+
+	rows, err := connection.Query(context.Background(), sql, organizationId, userId)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	defer rows.Close()
+
+	var results []interface{}
+
+	for rows.Next() {
+		var teamId, teamName, organizationName string
+		if err := rows.Scan(&teamId, &teamName, &organizationName); err != nil {
+			return results
+		}
+
+		team := make(map[string]string)
+
+		team["name"] = teamName
+		team["id"] = teamId
+		team["organization_name"] = organizationName
+		results = append(results, team)
+	}
+
+	log.Print("res", results)
+	return results
 }
 
 func upsertTeamOwners(teamId string, owners map[string]domain.Role) {

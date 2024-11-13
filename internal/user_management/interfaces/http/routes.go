@@ -56,7 +56,7 @@ func initTeamsRouter(router iris.Party) {
 	var leaguesRouter = router.Party("/teams", authorizationMiddleWare)
 	{
 		leaguesRouter.Post("/", teamsController.MakeTeam)
-		// leaguesRouter.Get("/", leaguesController.FetchLeagues)
+		leaguesRouter.Get("/", teamsController.FetchAll)
 	}
 }
 

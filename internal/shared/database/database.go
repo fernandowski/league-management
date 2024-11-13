@@ -16,7 +16,7 @@ var (
 func GetConnection() *pgxpool.Pool {
 	dbPoolOnce.Do(func() {
 		var err error
-		dbPool, err = pgxpool.New(context.Background(), "postgres://root:root@db:5432/league?sslmode=disable")
+		dbPool, err = pgxpool.New(context.Background(), "postgres://root:root@db:5432/league?sslmode=disable&search_path=league_management,public")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to create connection pool: %v\n", err)
 			os.Exit(1)

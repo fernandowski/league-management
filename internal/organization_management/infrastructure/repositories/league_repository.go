@@ -80,6 +80,8 @@ func (lr *LeagueRepository) FetchAll(organizationId string) ([]domain.League, er
 		return nil, err
 	}
 
+	defer rows.Close()
+
 	var leagues []domain.League
 
 	for rows.Next() {

@@ -5,7 +5,6 @@ import (
 	"league-management/internal/organization_management/application/services"
 	"league-management/internal/organization_management/domain"
 	domain2 "league-management/internal/user_management/domain/user"
-	"log"
 )
 
 var leagueService = services.NewLeagueService()
@@ -80,7 +79,6 @@ func (lc *LeaguesController) CreateLeague(ctx iris.Context) {
 
 func (lc *LeaguesController) FetchLeagues(ctx iris.Context) {
 	organizationId := ctx.URLParamDefault("organization_id", "")
-	log.Print(organizationId)
 
 	if organizationId == "" {
 		ctx.StatusCode(iris.StatusBadRequest)

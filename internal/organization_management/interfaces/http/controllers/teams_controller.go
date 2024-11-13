@@ -49,3 +49,27 @@ func (tc *TeamsController) MakeTeam(ctx iris.Context) {
 
 	ctx.JSON(iris.Map{"status": "ok"})
 }
+
+func (tc *TeamsController) FetchAll(ctx iris.Context) {
+
+	organizationId := ctx.URLParamDefault("organization_id", "")
+
+	if organizationId == "" {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "Missing organization id"})
+		return
+	}
+
+	value := ctx.Values().Get("user")
+	authenticatedUser, ok := value.(*domain2.User)
+
+	if !ok {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "No Authentication"})
+		return
+	}
+
+	results := teamService.Search(organizationId, authenticatedUser.Id)
+
+	ctx.JSON(results)
+}
