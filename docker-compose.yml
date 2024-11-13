@@ -16,7 +16,7 @@ services:
       POSTGRES_PASSWORD: root
       POSTGRES_DB: league
       POSTGRES_DB_SCHEMA: league_management
-      DB_CONNECTION_STRING: postgres://root:root@localhost:5432/league?sslmode=disable
+      DB_CONNECTION_STRING: postgres://root:root@db:5432/league?sslmode=disable&search_path=league_management,public
     command: air
     networks:
       - app-network
