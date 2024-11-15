@@ -3,9 +3,11 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
+	"strings"
 	"time"
 )
 
@@ -57,7 +59,9 @@ func (lr *LeagueRepository) Save(league *domain.League) error {
 			return err
 		}
 	} else {
-
+		if err := updateLeague(league); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -82,9 +86,28 @@ func insertIntoLeagues(league *domain.League) error {
 func updateLeague(league *domain.League) error {
 	connection := database.GetConnection()
 
-	sql := `UPDATE leagues SET name=$1, user_id=$2, organization_id=$3 WHERE id = $4;`
+	sql := `UPDATE leagues SET name=$1, user_id=$2 WHERE id = $4;`
 
-	_, err := connection.Exec(context.Background(), sql, league.Name, league.OwnerId, league.OrganizationId, *league.Id)
+	_, err := connection.Exec(context.Background(), sql, league.Name, league.OwnerId, *league.Id)
+
+	if err != nil {
+		return err
+	}
+
+	var totalValues = len(league.Memberships)
+	var values = make([]string, totalValues)
+
+	index := 0
+	for _, membership := range league.Memberships {
+		values[index] = fmt.Sprintf("('%s', '%s', '%s')", membership.ID, league.Id, membership.TeamID)
+		index++
+	}
+
+	sql = `INSERT INTO league_teams (id, league_id, team_id) VALUES ` +
+		strings.Join(values, ",") +
+		` ON CONFLICT (league_id, team_id) DO NOTHING`
+
+	_, err = connection.Exec(context.Background(), sql)
 
 	if err != nil {
 		return err

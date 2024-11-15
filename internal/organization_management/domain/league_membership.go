@@ -12,14 +12,14 @@ const (
 
 type LeagueMembership struct {
 	ID               string
-	teamID           string
+	TeamID           string
 	MemberShipStatus MembershipStatus
 }
 
 func NewLeagueMembership(MembershipId string, teamID string) (LeagueMembership, error) {
 	return LeagueMembership{
 		ID:               MembershipId,
-		teamID:           teamID,
+		TeamID:           teamID,
 		MemberShipStatus: MembershipInactive,
 	}, nil
 }
@@ -30,5 +30,5 @@ func (lm *LeagueMembership) Activate() (LeagueMembership, error) {
 		return LeagueMembership{}, errors.New("membership already in active state")
 	}
 
-	return LeagueMembership{ID: lm.ID, teamID: lm.teamID, MemberShipStatus: MembershipActive}, nil
+	return LeagueMembership{ID: lm.ID, TeamID: lm.TeamID, MemberShipStatus: MembershipActive}, nil
 }
