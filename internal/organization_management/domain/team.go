@@ -9,20 +9,20 @@ type TeamId string
 type TeamMembers []string
 type TeamName string
 
-type Role string
+type TeamRole string
 
 const (
-	RoleOwner          Role = "owner"
-	RoleCoach          Role = "coach"
-	RoleAssistantCoach Role = "assistant_coach"
-	RolePlayer         Role = "Player"
+	RoleOwner          TeamRole = "owner"
+	RoleCoach          TeamRole = "coach"
+	RoleAssistantCoach TeamRole = "assistant_coach"
+	RolePlayer         TeamRole = "Player"
 )
 
 type Team struct {
 	ID             *TeamId
 	Name           TeamName
 	members        TeamMembers
-	Roles          map[string]Role
+	Roles          map[string]TeamRole
 	OrganizationId string
 }
 
@@ -35,7 +35,7 @@ func NewTeamWithOwner(name TeamName, organizationId string, ownerId string) (*Te
 		return nil, errors.New("organization cannot be empty")
 	}
 
-	return &Team{ID: nil, Name: name, OrganizationId: organizationId, Roles: map[string]Role{ownerId: RoleOwner}}, nil
+	return &Team{ID: nil, Name: name, OrganizationId: organizationId, Roles: map[string]TeamRole{ownerId: RoleOwner}}, nil
 }
 
 func NewTeamWithoutOwner(name TeamName, organizationId string) (*Team, error) {

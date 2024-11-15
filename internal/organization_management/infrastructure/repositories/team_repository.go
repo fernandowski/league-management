@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
-	"log"
 	"strings"
 )
 
@@ -43,6 +42,54 @@ func (tr *TeamRepository) Save(team *domain.Team) error {
 	return err
 }
 
+func (tr *TeamRepository) FindById(teamId string) (domain.Team, error) {
+	connection := database.GetConnection()
+
+	sql := `
+		SELECT
+			teams.id as team_id,
+			teams.name as team_name,
+			organizations.id as organization_id,
+			team_user_roles.user_id as user_id,
+			team_user_roles.role as user_role
+		FROM teams
+		JOIN organization_teams ON organization_teams.team_id = teams.id
+		JOIN organizations ON organizations.id = organization_teams.organization_id
+		LEFT JOIN team_user_roles ON team_user_roles.team_id = teams.id
+		WHERE
+		teams.id=$1`
+
+	rows, err := connection.Query(context.Background(), sql, teamId)
+
+	var team = domain.Team{}
+
+	if err != nil {
+		return team, err
+	}
+
+	defer rows.Close()
+
+	var id, teamName, organizationId string
+	var roles = make(map[string]domain.TeamRole)
+
+	for rows.Next() {
+		var roleUserId string
+		var userRole string
+		if err := rows.Scan(&id, &teamName, &organizationId, &roleUserId, &userRole); err != nil {
+			return team, err
+		}
+
+		roles[roleUserId] = domain.TeamRole(userRole)
+	}
+
+	team.ID = (*domain.TeamId)(&teamId)
+	team.Name = domain.TeamName(teamName)
+	team.OrganizationId = organizationId
+	team.Roles = roles
+
+	return team, nil
+}
+
 func (tr *TeamRepository) FetchAll(organizationId string, userId string) []interface{} {
 	connection := database.GetConnection()
 
@@ -76,11 +123,10 @@ func (tr *TeamRepository) FetchAll(organizationId string, userId string) []inter
 		results = append(results, team)
 	}
 
-	log.Print("res", results)
 	return results
 }
 
-func upsertTeamOwners(teamId string, owners map[string]domain.Role) {
+func upsertTeamOwners(teamId string, owners map[string]domain.TeamRole) {
 	var totalValues = len(owners)
 	var values = make([]string, totalValues)
 

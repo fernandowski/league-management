@@ -44,22 +44,53 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 		Name:           name,
 		OwnerId:        ownerId,
 		OrganizationId: organizationId,
-		TeamIds:        []string{},
+		Memberships:    []domain.LeagueMembership{},
 	}, nil
 }
 
 func (lr *LeagueRepository) Save(league *domain.League) error {
+
+	updateID := league.Id
+
+	if updateID == nil {
+		if err := insertIntoLeagues(league); err != nil {
+			return err
+		}
+	} else {
+
+	}
+
+	return nil
+
+}
+
+func insertIntoLeagues(league *domain.League) error {
 	connection := database.GetConnection()
 
-	sql := "INSERT INTO league_management.leagues (name, user_id, organization_id) VALUES ($1, $2, $3);"
+	sql := `INSERT INTO leagues (name, user_id, organization_id) VALUES ($1, $2, $3);`
 
 	_, err := connection.Exec(context.Background(), sql, league.Name, league.OwnerId, league.OrganizationId)
 
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 
-	return err
+	return nil
+
+}
+
+func updateLeague(league *domain.League) error {
+	connection := database.GetConnection()
+
+	sql := `UPDATE leagues SET name=$1, user_id=$2, organization_id=$3 WHERE id = $4;`
+
+	_, err := connection.Exec(context.Background(), sql, league.Name, league.OwnerId, league.OrganizationId, *league.Id)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (lr *LeagueRepository) FetchAll(organizationId string) ([]domain.League, error) {

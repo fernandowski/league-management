@@ -39,6 +39,41 @@ func (ls *LeagueService) Provision(ownerId string, organizationId string, league
 	return nil
 }
 
+func (ls *LeagueService) InitiateTeamMembership(orgOwnerID string, leagueID string, teamID string) error {
+
+	organizationOwner, _ := userRepo.FindById(orgOwnerID)
+	if organizationOwner == nil {
+		return errors.New("user does not exist")
+	}
+
+	league, err := leagueRepository.FindById(leagueID)
+	if err != nil {
+		return errors.New("league does not exist")
+	}
+
+	organization, err := organizationRepo.FindById(league.OrganizationId)
+	if belongsToUser := organization.BelongsToOwner(orgOwnerID); !belongsToUser {
+		return errors.New("only organization owner allowed to change memberships")
+	}
+
+	team, err := teamRepository.FindById(teamID)
+	if err != nil {
+		return errors.New("team does not exist")
+	}
+
+	_, err = league.StartTeamMembership(string(*team.ID))
+	if err != nil {
+		return err
+	}
+
+	err = leagueRepository.Save(league)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
 func (ls *LeagueService) FetchLeagues(userId string, organizationId string) ([]domain.League, error) {
 	user, _ := userRepo.FindById(userId)
 
