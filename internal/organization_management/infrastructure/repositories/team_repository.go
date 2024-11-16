@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
@@ -42,7 +43,7 @@ func (tr *TeamRepository) Save(team *domain.Team) error {
 	return err
 }
 
-func (tr *TeamRepository) FindById(teamId string) (domain.Team, error) {
+func (tr *TeamRepository) FindById(teamId string) (*domain.Team, error) {
 	connection := database.GetConnection()
 
 	sql := `
@@ -61,10 +62,8 @@ func (tr *TeamRepository) FindById(teamId string) (domain.Team, error) {
 
 	rows, err := connection.Query(context.Background(), sql, teamId)
 
-	var team = domain.Team{}
-
 	if err != nil {
-		return team, err
+		return nil, err
 	}
 
 	defer rows.Close()
@@ -72,22 +71,25 @@ func (tr *TeamRepository) FindById(teamId string) (domain.Team, error) {
 	var id, teamName, organizationId string
 	var roles = make(map[string]domain.TeamRole)
 
+	if !rows.Next() {
+		return nil, errors.New("team does not exist")
+	}
+
 	for rows.Next() {
 		var roleUserId string
 		var userRole string
 		if err := rows.Scan(&id, &teamName, &organizationId, &roleUserId, &userRole); err != nil {
-			return team, err
+			return nil, err
 		}
-
 		roles[roleUserId] = domain.TeamRole(userRole)
 	}
 
-	team.ID = (*domain.TeamId)(&teamId)
-	team.Name = domain.TeamName(teamName)
-	team.OrganizationId = organizationId
-	team.Roles = roles
-
-	return team, nil
+	return &domain.Team{
+		ID:             (*domain.TeamId)(&teamId),
+		Name:           domain.TeamName(teamName),
+		OrganizationId: organizationId,
+		Roles:          roles,
+	}, nil
 }
 
 func (tr *TeamRepository) FetchAll(organizationId string, userId string) []interface{} {

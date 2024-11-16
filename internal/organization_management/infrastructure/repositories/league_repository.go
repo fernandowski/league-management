@@ -21,8 +21,8 @@ func NewLeagueRepository() LeagueRepository {
 func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 	connection := database.GetConnection()
 
-	sql := "SELECT id, name, user_id, organization_id, created_at, updated_at" +
-		"FROM league_management.leagues" +
+	sql := "SELECT id, name, user_id, organization_id, created_at, updated_at " +
+		"FROM league_management.leagues " +
 		"WHERE id=$1"
 
 	var id string
@@ -38,11 +38,11 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
 		}
-		panic(err)
+		panic(err.Error())
 	}
 
 	return &domain.League{
-		Id:             nil,
+		Id:             &id,
 		Name:           name,
 		OwnerId:        ownerId,
 		OrganizationId: organizationId,
@@ -53,7 +53,6 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 func (lr *LeagueRepository) Save(league *domain.League) error {
 
 	updateID := league.Id
-
 	if updateID == nil {
 		if err := insertIntoLeagues(league); err != nil {
 			return err
@@ -65,7 +64,6 @@ func (lr *LeagueRepository) Save(league *domain.League) error {
 	}
 
 	return nil
-
 }
 
 func insertIntoLeagues(league *domain.League) error {
@@ -80,13 +78,12 @@ func insertIntoLeagues(league *domain.League) error {
 	}
 
 	return nil
-
 }
 
 func updateLeague(league *domain.League) error {
 	connection := database.GetConnection()
 
-	sql := `UPDATE leagues SET name=$1, user_id=$2 WHERE id = $4;`
+	sql := `UPDATE leagues SET name=$1, user_id=$2 WHERE id = $3;`
 
 	_, err := connection.Exec(context.Background(), sql, league.Name, league.OwnerId, *league.Id)
 
@@ -99,7 +96,7 @@ func updateLeague(league *domain.League) error {
 
 	index := 0
 	for _, membership := range league.Memberships {
-		values[index] = fmt.Sprintf("('%s', '%s', '%s')", membership.ID, league.Id, membership.TeamID)
+		values[index] = fmt.Sprintf("('%s', '%s', '%s')", membership.ID, *league.Id, membership.TeamID)
 		index++
 	}
 

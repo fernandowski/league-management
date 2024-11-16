@@ -16,6 +16,10 @@ type leagueCreateDTO struct {
 	OrganizationId string `json:"organization_id"`
 }
 
+type leagueInvitationDTO struct {
+	TeamId string `json:"team_id"`
+}
+
 type leagueSearchQueryDTO struct {
 	OrganizationId string `json:"organization_id"`
 }
@@ -28,9 +32,8 @@ type leagueResponseDto struct {
 
 func toLeagueSearchQueryDto(league domain.League) leagueResponseDto {
 	return leagueResponseDto{
-		Id:      *league.Id,
-		Name:    league.Name,
-		TeamIds: league.TeamIds,
+		Id:   *league.Id,
+		Name: league.Name,
 	}
 }
 
@@ -67,6 +70,41 @@ func (lc *LeaguesController) CreateLeague(ctx iris.Context) {
 	}
 
 	err = leagueService.Provision(authenticatedUser.Id, body.OrganizationId, body.Name)
+
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(iris.Map{"status": "ok"})
+}
+
+func (lc *LeaguesController) StartLeagueMembership(ctx iris.Context) {
+	var body leagueInvitationDTO
+	err := ctx.ReadJSON(&body)
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "missing request params"})
+		return
+	}
+
+	value := ctx.Values().Get("user")
+	authenticatedUser, ok := value.(*domain2.User)
+	if !ok {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "No Authentication"})
+		return
+	}
+
+	teamId := ctx.Params().GetDefault("league_id", "")
+	if teamId == "" {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "missing league_id"})
+		return
+	}
+
+	err = leagueService.InitiateTeamMembership(authenticatedUser.Id, teamId.(string), body.TeamId)
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)

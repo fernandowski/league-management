@@ -48,6 +48,7 @@ func initLeaguesRouter(router iris.Party) {
 	{
 		leaguesRouter.Post("/", leaguesController.CreateLeague)
 		leaguesRouter.Get("/", leaguesController.FetchLeagues)
+		leaguesRouter.Post("/{league_id}/invites", leaguesController.StartLeagueMembership)
 	}
 }
 
