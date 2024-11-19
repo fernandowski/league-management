@@ -153,3 +153,43 @@ func (lr *LeagueRepository) FetchAll(organizationId string) ([]domain.League, er
 
 	return leagues, nil
 }
+
+func (lr *LeagueRepository) FetchLeagueMembers(leagueId string) ([]interface{}, error) {
+	connection := database.GetConnection()
+
+	sql := `
+		SELECT
+		    league_teams.id as membership_id,
+			teams.id as team_id,
+			teams.name as team_name,
+			leagues.id as league_id
+		FROM league_teams
+		JOIN teams ON teams.id = league_teams.team_id
+		JOIN leagues ON leagues.id = league_teams.league_id
+		WHERE leagues.id=$1;`
+
+	rows, err := connection.Query(context.Background(), sql, leagueId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := []interface{}{}
+
+	for rows.Next() {
+		var membershipId, teamId, teamName, leagueId string
+		if err := rows.Scan(&membershipId, &teamId, &teamName, &leagueId); err != nil {
+			return nil, err
+		}
+		result := make(map[string]string)
+
+		result["membership_id"] = membershipId
+		result["team_id"] = teamId
+		result["team_name"] = teamName
+		result["league_id"] = leagueId
+
+		results = append(results, result)
+	}
+
+	return results, nil
+}

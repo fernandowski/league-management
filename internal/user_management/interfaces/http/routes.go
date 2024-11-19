@@ -6,7 +6,6 @@ import (
 	"league-management/internal/user_management/application/service"
 	pg "league-management/internal/user_management/infrastructure/repositories/postgres"
 	"league-management/internal/user_management/interfaces/http/controllers"
-	"log"
 )
 
 func registerV1API(app *iris.Application) {
@@ -49,6 +48,7 @@ func initLeaguesRouter(router iris.Party) {
 		leaguesRouter.Post("/", leaguesController.CreateLeague)
 		leaguesRouter.Get("/", leaguesController.FetchLeagues)
 		leaguesRouter.Post("/{league_id}/invites", leaguesController.StartLeagueMembership)
+		leaguesRouter.Get("/{league_id}/members", leaguesController.FetchLeaguesMembers)
 	}
 }
 
@@ -113,8 +113,6 @@ func Initialize() *iris.Application {
 			ctx.StatusCode(iris.StatusNoContent)
 			return
 		}
-
-		log.Print("here")
 
 		ctx.Next()
 	}
