@@ -52,8 +52,8 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 
 func (lr *LeagueRepository) Save(league *domain.League) error {
 
-	updateID := league.Id
-	if updateID == nil {
+	updateID := *league.Id
+	if updateID == "" {
 		if err := insertIntoLeagues(league); err != nil {
 			return err
 		}
