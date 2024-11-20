@@ -5,6 +5,7 @@ import (
 	"league-management/internal/organization_management/application/services"
 	"league-management/internal/organization_management/domain"
 	domain2 "league-management/internal/user_management/domain/user"
+	"log"
 )
 
 type TeamsController struct {
@@ -51,8 +52,8 @@ func (tc *TeamsController) MakeTeam(ctx iris.Context) {
 }
 
 func (tc *TeamsController) FetchAll(ctx iris.Context) {
-
 	organizationId := ctx.URLParamDefault("organization_id", "")
+	searchTerm := ctx.URLParamDefault("term", "")
 
 	if organizationId == "" {
 		ctx.StatusCode(iris.StatusBadRequest)
@@ -69,7 +70,8 @@ func (tc *TeamsController) FetchAll(ctx iris.Context) {
 		return
 	}
 
-	results := teamService.Search(organizationId, authenticatedUser.Id)
+	log.Print(searchTerm)
+	results := teamService.Search(organizationId, authenticatedUser.Id, searchTerm)
 
 	ctx.JSON(results)
 }

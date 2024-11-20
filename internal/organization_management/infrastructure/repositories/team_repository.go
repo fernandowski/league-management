@@ -92,16 +92,23 @@ func (tr *TeamRepository) FindById(teamId string) (*domain.Team, error) {
 	}, nil
 }
 
-func (tr *TeamRepository) FetchAll(organizationId string, userId string) []interface{} {
+func (tr *TeamRepository) FetchAll(organizationId, userId, searchTerm string) []interface{} {
 	connection := database.GetConnection()
+	searchParameters := []interface{}{organizationId, userId}
+	placeHolders := []string{"organization_teams.organization_id=$1", "organizations.user_id= $2"}
+
+	if searchTerm != "" {
+		searchParameters = append(searchParameters, searchTerm)
+		placeHolders = append(placeHolders, "teams.name ILIKE $3")
+	}
 
 	sql := "SELECT teams.id, teams.name, organizations.name as organization_name " +
 		"FROM organization_teams " +
 		"JOIN organizations ON organizations.id = organization_teams.organization_id " +
 		"JOIN teams on teams.id = organization_teams.team_id " +
-		"WHERE organization_teams.organization_id=$1 AND organizations.user_id= $2 "
+		"WHERE " + strings.Join(placeHolders, " AND ")
 
-	rows, err := connection.Query(context.Background(), sql, organizationId, userId)
+	rows, err := connection.Query(context.Background(), sql, searchParameters...)
 
 	if err != nil {
 		panic(err.Error())
@@ -109,7 +116,7 @@ func (tr *TeamRepository) FetchAll(organizationId string, userId string) []inter
 
 	defer rows.Close()
 
-	var results []interface{}
+	results := []interface{}{}
 
 	for rows.Next() {
 		var teamId, teamName, organizationName string
