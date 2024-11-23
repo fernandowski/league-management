@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
+	"log"
 	"strings"
 )
 
@@ -92,23 +93,25 @@ func (tr *TeamRepository) FindById(teamId string) (*domain.Team, error) {
 	}, nil
 }
 
-func (tr *TeamRepository) FetchAll(organizationId, userId, searchTerm string) []interface{} {
+func (tr *TeamRepository) Search(organizationId, userId, searchTerm string) []interface{} {
 	connection := database.GetConnection()
-	searchParameters := []interface{}{organizationId, userId}
-	placeHolders := []string{"organization_teams.organization_id=$1", "organizations.user_id= $2"}
+	queryBuilder := QueryBuilder{}
 
-	if searchTerm != "" {
-		searchParameters = append(searchParameters, searchTerm)
-		placeHolders = append(placeHolders, "teams.name ILIKE $3")
-	}
+	sql := `SELECT teams.id, teams.name, organizations.name as organization_name 
+		FROM organization_teams 
+		JOIN organizations ON organizations.id = organization_teams.organization_id 
+		JOIN teams on teams.id = organization_teams.team_id `
 
-	sql := "SELECT teams.id, teams.name, organizations.name as organization_name " +
-		"FROM organization_teams " +
-		"JOIN organizations ON organizations.id = organization_teams.organization_id " +
-		"JOIN teams on teams.id = organization_teams.team_id " +
-		"WHERE " + strings.Join(placeHolders, " AND ")
+	queryBuilder.SetQuery(sql)
+	queryBuilder.AddFilter("organization_teams.organization_id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), organizationId)
+	queryBuilder.AddFilter("organizations.user_id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), userId)
+	queryBuilder.AddFilter("teams.name ILIKE $"+fmt.Sprint(len(queryBuilder.parameters)+1), "%"+searchTerm+"%")
+	//queryBuilder.SetPagination(1000, 0)
 
-	rows, err := connection.Query(context.Background(), sql, searchParameters...)
+	query, parameters := queryBuilder.BuildQuery()
+
+	log.Print(query)
+	rows, err := connection.Query(context.Background(), query, parameters...)
 
 	if err != nil {
 		panic(err.Error())

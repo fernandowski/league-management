@@ -45,7 +45,7 @@ func (ts *TeamService) Make(teamName domain.TeamName, userId string, organizatio
 
 func (ts *TeamService) Search(organizationId, userId, searchTerm string) []interface{} {
 
-	result := teamRepository.FetchAll(organizationId, userId, searchTerm)
+	result := teamRepository.Search(organizationId, userId, searchTerm)
 
 	return result
 }
