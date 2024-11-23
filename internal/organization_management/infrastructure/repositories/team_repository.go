@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
-	"log"
 	"strings"
 )
 
@@ -107,10 +106,8 @@ func (tr *TeamRepository) Search(organizationId, userId, searchTerm string) []in
 	queryBuilder.AddFilter("organizations.user_id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), userId)
 	queryBuilder.AddFilter("teams.name ILIKE $"+fmt.Sprint(len(queryBuilder.parameters)+1), "%"+searchTerm+"%")
 	//queryBuilder.SetPagination(1000, 0)
-
 	query, parameters := queryBuilder.BuildQuery()
 
-	log.Print(query)
 	rows, err := connection.Query(context.Background(), query, parameters...)
 
 	if err != nil {
