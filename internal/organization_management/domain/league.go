@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"github.com/google/uuid"
 )
 
@@ -32,4 +33,23 @@ func (l *League) StartTeamMembership(teamId string) (*LeagueMembership, error) {
 	l.Memberships = append(l.Memberships, newLeagueMembership)
 
 	return &newLeagueMembership, nil
+}
+
+func (l *League) RemoveMembership(membershipId string) (*League, error) {
+	if len(l.Memberships) <= 0 {
+		return nil, errors.New("membership empty")
+	}
+
+	league := l
+	memberships := []LeagueMembership{}
+
+	for _, membership := range l.Memberships {
+		if membership.ID != membershipId {
+			memberships = append(memberships, membership)
+		}
+	}
+
+	league.Memberships = memberships
+
+	return league, nil
 }

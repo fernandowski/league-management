@@ -41,12 +41,31 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 		panic(err.Error())
 	}
 
+	sql = `SELECT id, team_id FROM league_teams WHERE league_id=$1`
+
+	rows, err := connection.Query(context.Background(), sql, leagueId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	memberships := []domain.LeagueMembership{}
+
+	for rows.Next() {
+		var id string
+		var teamId string
+		if err := rows.Scan(&id, &teamId); err != nil {
+
+		}
+		memberships = append(memberships, domain.LeagueMembership{ID: id, TeamID: teamId})
+	}
+
 	return &domain.League{
 		Id:             &id,
 		Name:           name,
 		OwnerId:        ownerId,
 		OrganizationId: organizationId,
-		Memberships:    []domain.LeagueMembership{},
+		Memberships:    memberships,
 	}, nil
 }
 
@@ -91,20 +110,40 @@ func updateLeague(league *domain.League) error {
 		return err
 	}
 
-	var totalValues = len(league.Memberships)
-	var values = make([]string, totalValues)
+	if len(league.Memberships) > 0 {
+		var totalValues = len(league.Memberships)
+		var values = make([]string, totalValues)
 
-	index := 0
-	for _, membership := range league.Memberships {
-		values[index] = fmt.Sprintf("('%s', '%s', '%s')", membership.ID, *league.Id, membership.TeamID)
-		index++
+		index := 0
+		for _, membership := range league.Memberships {
+			values[index] = fmt.Sprintf("('%s', '%s', '%s')", membership.ID, *league.Id, membership.TeamID)
+			index++
+		}
+
+		sql = `INSERT INTO league_teams (id, league_id, team_id) VALUES ` +
+			strings.Join(values, ",") +
+			` ON CONFLICT (league_id, team_id) DO NOTHING`
+
+		_, err = connection.Exec(context.Background(), sql)
+
+		if err != nil {
+			return err
+		}
 	}
 
-	sql = `INSERT INTO league_teams (id, league_id, team_id) VALUES ` +
-		strings.Join(values, ",") +
-		` ON CONFLICT (league_id, team_id) DO NOTHING`
+	membershipValues := []interface{}{*league.Id}
+	placeholders := []string{}
+	if len(league.Memberships) > 0 {
+		for _, membership := range league.Memberships {
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(membershipValues)+1))
+			membershipValues = append(membershipValues, membership.ID)
+		}
+		sql = `DELETE FROM league_teams WHERE league_id=$1 AND id NOT IN (` + strings.Join(placeholders, ",") + `);`
+	} else {
+		sql = `DELETE FROM league_teams WHERE league_id=$1`
+	}
 
-	_, err = connection.Exec(context.Background(), sql)
+	_, err = connection.Exec(context.Background(), sql, membershipValues...)
 
 	if err != nil {
 		return err

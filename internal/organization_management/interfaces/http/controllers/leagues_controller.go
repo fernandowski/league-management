@@ -115,6 +115,40 @@ func (lc *LeaguesController) StartLeagueMembership(ctx iris.Context) {
 	ctx.JSON(iris.Map{"status": "ok"})
 }
 
+func (lc *LeaguesController) RevokeLeagueMembership(ctx iris.Context) {
+	leagueId := ctx.Params().GetDefault("league_id", "")
+	if leagueId == "" {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "missing league_id"})
+		return
+	}
+
+	membershipId := ctx.Params().GetDefault("membership_id", "")
+	if membershipId == "" {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "missing membership_id"})
+		return
+	}
+
+	value := ctx.Values().Get("user")
+	authenticatedUser, ok := value.(*domain2.User)
+	if !ok {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "No Authentication"})
+		return
+	}
+
+	err := leagueService.RevokeTeamMembership(authenticatedUser.Id, leagueId.(string), membershipId.(string))
+
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(iris.Map{"status": "ok"})
+}
+
 func (lc *LeaguesController) FetchLeagues(ctx iris.Context) {
 	organizationId := ctx.URLParamDefault("organization_id", "")
 

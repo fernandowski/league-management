@@ -49,6 +49,7 @@ func initLeaguesRouter(router iris.Party) {
 		leaguesRouter.Get("/", leaguesController.FetchLeagues)
 		leaguesRouter.Post("/{league_id}/invites", leaguesController.StartLeagueMembership)
 		leaguesRouter.Get("/{league_id}/members", leaguesController.FetchLeaguesMembers)
+		leaguesRouter.Delete("/{league_id}/members/{membership_id}", leaguesController.RevokeLeagueMembership)
 	}
 }
 
@@ -107,7 +108,7 @@ func Initialize() *iris.Application {
 		ctx.Header("Access-Control-Allow-Credentials", "true")
 
 		if ctx.Method() == iris.MethodOptions {
-			ctx.Header("Access-Control-Methods", "POST, PUT, PATCH, DELETE, GET")
+			ctx.Header("Access-Control-Allow-Methods", "POST, PUT, PATCH, DELETE, GET, OPTIONS")
 			ctx.Header("Access-Control-Allow-Headers", "Access-Control-Allow-Origin,Content-Type,auth")
 			ctx.Header("Access-Control-Max-Age", "86400")
 			ctx.StatusCode(iris.StatusNoContent)
