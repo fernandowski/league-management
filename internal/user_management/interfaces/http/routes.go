@@ -43,13 +43,17 @@ func initOrganizationRouter(router iris.Party) {
 
 func initLeaguesRouter(router iris.Party) {
 	var leaguesController = controllers2.NewLeaguesController()
+	var seasonController = controllers2.NewSeasonController()
 	var leaguesRouter = router.Party("/leagues", authorizationMiddleWare)
 	{
 		leaguesRouter.Post("/", leaguesController.CreateLeague)
 		leaguesRouter.Get("/", leaguesController.FetchLeagues)
+
 		leaguesRouter.Post("/{league_id}/invites", leaguesController.StartLeagueMembership)
 		leaguesRouter.Get("/{league_id}/members", leaguesController.FetchLeaguesMembers)
 		leaguesRouter.Delete("/{league_id}/members/{membership_id}", leaguesController.RevokeLeagueMembership)
+
+		leaguesRouter.Post("/{league_id}/seasons", seasonController.AddNewSeasonToLeague)
 	}
 }
 
