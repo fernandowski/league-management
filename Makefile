@@ -4,6 +4,16 @@ GOOSE := $(HOME)/go/bin/goose
 MIGRATIONS_DIR := ./migrations
 DB_URL := "postgres://root:root@localhost:5432?sslmode=disable&database=league"
 
+# Default target: Show help
+.PHONY: help
+help:
+	@echo "Available commands:"
+	@echo "  make test              - Run all tests"
+	@echo "  make color-test        - Run tests with colored output"
+	@echo "  make create-migration  - Create a new database migration"
+	@echo "  make migrate-up        - Run all pending database migrations"
+	@echo "  make migrate-down      - Rollback the last database migration"
+
 # Default target: Run all tests
 .PHONY: test
 test:
