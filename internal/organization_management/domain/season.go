@@ -52,10 +52,13 @@ func generateRoundRobin(leagueMembers []LeagueMembership) [][][]LeagueMembership
 	numTeams := len(leagueMembers)
 	members := leagueMembers
 	if numTeams%2 != 0 {
-		if byeMember, err := NewLeagueMembership("bye", "bye"); err != nil {
-			members = append(members, byeMember)
-			numTeams++
+		byeMember := LeagueMembership{
+			ID:               "bye",
+			TeamID:           "bye",
+			MemberShipStatus: MembershipActive,
 		}
+		members = append(members, byeMember)
+		numTeams++
 	}
 
 	rounds := [][][]LeagueMembership{}
