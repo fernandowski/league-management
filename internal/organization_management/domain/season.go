@@ -6,10 +6,11 @@ import (
 )
 
 type Season struct {
-	ID       string
-	LeagueId string
-	Name     string
-	Rounds   []Round
+	ID             string
+	LeagueId       string
+	Name           string
+	Rounds         []Round
+	MatchLocations []MatchLocation
 }
 
 func NewSeason(name, leagueID string) (*Season, error) {

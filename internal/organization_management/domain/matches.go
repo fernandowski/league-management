@@ -1,8 +1,9 @@
 package domain
 
 type Match struct {
-	HomeTeamID string
-	AwayTeamID string
+	HomeTeamID       string
+	AwayTeamID       string
+	AssignedLocation MatchLocation
 }
 
 func NewMatch(homeTeamID, awayTeamID string) Match {
