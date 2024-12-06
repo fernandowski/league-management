@@ -11,3 +11,8 @@ func NewRound() Round {
 		Matches:     []Match{},
 	}
 }
+
+func (r *Round) AddMatch(match Match) {
+	matches := r.Matches
+	r.Matches = append(matches, match)
+}

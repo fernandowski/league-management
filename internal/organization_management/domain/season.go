@@ -38,11 +38,8 @@ func (s *Season) ScheduleRounds(league League) error {
 		round := Round{Matches: []Match{}, RoundNumber: roundNumber + 1}
 
 		for _, pair := range pairs {
-			match := Match{
-				HomeTeamID: pair[0].TeamID,
-				AwayTeamID: pair[1].TeamID,
-			}
-			round.Matches = append(round.Matches, match)
+			match, _ := NewMatch(pair[0].TeamID, pair[1].TeamID)
+			round.AddMatch(match)
 		}
 		s.Rounds = append(s.Rounds, round)
 	}
