@@ -5,7 +5,6 @@ import (
 	"league-management/internal/organization_management/application/services"
 	"league-management/internal/organization_management/domain"
 	domain2 "league-management/internal/user_management/domain/user"
-	"log"
 )
 
 type TeamsController struct {
@@ -70,7 +69,6 @@ func (tc *TeamsController) FetchAll(ctx iris.Context) {
 		return
 	}
 
-	log.Print(searchTerm)
 	results := teamService.Search(organizationId, authenticatedUser.Id, searchTerm)
 
 	ctx.JSON(results)

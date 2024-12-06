@@ -54,6 +54,7 @@ func initLeaguesRouter(router iris.Party) {
 		leaguesRouter.Delete("/{league_id}/members/{membership_id}", leaguesController.RevokeLeagueMembership)
 
 		leaguesRouter.Post("/{league_id}/seasons", seasonController.AddNewSeasonToLeague)
+		leaguesRouter.Get("/{league_id}/seasons", seasonController.Search)
 	}
 }
 

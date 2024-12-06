@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/kataras/iris/v12"
 	"league-management/internal/organization_management/application/services"
+	"league-management/internal/shared/dtos"
 	domain2 "league-management/internal/user_management/domain/user"
 )
 
@@ -14,6 +15,7 @@ var seasonService = services.NewSeasonService()
 func NewSeasonController() *SeasonController {
 	return &SeasonController{}
 }
+
 func (sc *SeasonController) AddNewSeasonToLeague(ctx iris.Context) {
 	var requestBody struct {
 		Name string `json:"name"`
@@ -49,4 +51,46 @@ func (sc *SeasonController) AddNewSeasonToLeague(ctx iris.Context) {
 	}
 
 	ctx.JSON(iris.Map{"status": "ok"})
+}
+
+func (sc *SeasonController) Search(ctx iris.Context) {
+
+	searchTerm := ctx.URLParamDefault("term", "")
+
+	leagueId := ctx.Params().GetDefault("league_id", "").(string)
+	if leagueId == "" {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "missing league_id"})
+		return
+	}
+
+	limit, _ := ctx.URLParamInt("limit")
+	if limit < 0 {
+		limit = 50
+	}
+
+	offset, _ := ctx.URLParamInt("offset")
+	if offset < 0 {
+		offset = 0
+	}
+
+	value := ctx.Values().Get("user")
+	authenticatedUser, ok := value.(*domain2.User)
+
+	if !ok {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "No Authentication"})
+		return
+	}
+
+	var searchDTO = dtos.SearchSeasonDTO{
+		LeagueId: leagueId,
+		Term:     searchTerm,
+		Limit:    limit,
+		Offset:   offset,
+	}
+
+	var results = seasonService.Search(authenticatedUser.Id, leagueId, searchDTO)
+
+	ctx.JSON(results)
 }

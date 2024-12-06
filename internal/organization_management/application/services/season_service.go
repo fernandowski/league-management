@@ -4,6 +4,7 @@ import (
 	"errors"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/organization_management/infrastructure/repositories"
+	"league-management/internal/shared/dtos"
 )
 
 type SeasonService struct {
@@ -11,6 +12,13 @@ type SeasonService struct {
 
 func NewSeasonService() *SeasonService {
 	return &SeasonService{}
+}
+
+type SearchSeasonDTO struct {
+	LeagueId string
+	Term     string
+	Limit    int
+	Offset   int
 }
 
 var seasonRepository = repositories.NewSeasonRepository()
@@ -45,4 +53,9 @@ func (ss *SeasonService) AddNewSeason(orgOwnerID, leagueID, seasonName string) e
 
 func (ss *SeasonService) PlanSchedule() error {
 	return nil
+}
+
+func (ss *SeasonService) Search(orgOwnerID, leagueID string, searchDTO dtos.SearchSeasonDTO) []interface{} {
+	var results = seasonRepository.Search(orgOwnerID, leagueID, searchDTO)
+	return results
 }
