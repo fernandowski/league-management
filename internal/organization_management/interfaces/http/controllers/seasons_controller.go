@@ -85,9 +85,11 @@ func (sc *SeasonController) Search(ctx iris.Context) {
 
 	var searchDTO = dtos.SearchSeasonDTO{
 		LeagueId: leagueId,
-		Term:     searchTerm,
-		Limit:    limit,
-		Offset:   offset,
+		BaseSearchDTO: dtos.BaseSearchDTO{
+			Term:   searchTerm,
+			Limit:  limit,
+			Offset: offset,
+		},
 	}
 
 	var results = seasonService.Search(authenticatedUser.Id, leagueId, searchDTO)

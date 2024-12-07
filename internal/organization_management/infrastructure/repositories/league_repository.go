@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
+	"league-management/internal/shared/dtos"
 	"strings"
 	"time"
 )
@@ -152,8 +153,9 @@ func updateLeague(league *domain.League) error {
 	return nil
 }
 
-func (lr *LeagueRepository) FetchAll(organizationId string) ([]domain.League, error) {
+func (lr *LeagueRepository) FetchAll(searchDTO dtos.LeagueSearchDTO) ([]domain.League, error) {
 	connection := database.GetConnection()
+	queryBuilder := QueryBuilder{}
 
 	sql := "SELECT " +
 		"league_management.leagues.id," +
@@ -161,10 +163,15 @@ func (lr *LeagueRepository) FetchAll(organizationId string) ([]domain.League, er
 		"league_management.leagues.user_id," +
 		"league_management.leagues.organization_id " +
 		"FROM league_management.leagues " +
-		"JOIN league_management.organizations ON league_management.organizations.id = league_management.leagues.organization_id " +
-		"WHERE league_management.organizations.id =$1"
+		"JOIN league_management.organizations ON league_management.organizations.id = league_management.leagues.organization_id "
 
-	rows, err := connection.Query(context.Background(), sql, organizationId)
+	queryBuilder.SetQuery(sql)
+
+	queryBuilder.AddFilter("league_management.organizations.id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), searchDTO.OrganizationID)
+	queryBuilder.SetPagination(searchDTO.Limit, searchDTO.Offset)
+
+	sql, parameters := queryBuilder.BuildQuery()
+	rows, err := connection.Query(context.Background(), sql, parameters...)
 
 	if err != nil {
 		return nil, err

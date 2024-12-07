@@ -5,6 +5,7 @@ import (
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/organization_management/domain/domainservices"
 	"league-management/internal/organization_management/infrastructure/repositories"
+	"league-management/internal/shared/dtos"
 )
 
 type LeagueService struct{}
@@ -99,14 +100,14 @@ func (ls *LeagueService) RevokeTeamMembership(orgOwnerID, leagueId, membershipId
 	return nil
 }
 
-func (ls *LeagueService) FetchLeagues(userId string, organizationId string) ([]domain.League, error) {
+func (ls *LeagueService) Search(userId string, searchDTO dtos.LeagueSearchDTO) ([]domain.League, error) {
 	user, _ := userRepo.FindById(userId)
 
 	if user == nil {
 		return nil, errors.New("user does not exist")
 	}
 
-	organization, err := organizationRepo.FindById(organizationId)
+	organization, err := organizationRepo.FindById(searchDTO.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +116,7 @@ func (ls *LeagueService) FetchLeagues(userId string, organizationId string) ([]d
 		return nil, errors.New("does not belong to user")
 	}
 
-	leagues, err := leagueRepository.FetchAll(organizationId)
+	leagues, err := leagueRepository.FetchAll(searchDTO)
 
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@ import (
 	"github.com/kataras/iris/v12"
 	"league-management/internal/organization_management/application/services"
 	"league-management/internal/organization_management/domain"
+	"league-management/internal/shared/dtos"
 	domain2 "league-management/internal/user_management/domain/user"
 )
 
@@ -150,6 +151,8 @@ func (lc *LeaguesController) RevokeLeagueMembership(ctx iris.Context) {
 }
 
 func (lc *LeaguesController) FetchLeagues(ctx iris.Context) {
+	searchTerm := ctx.URLParamDefault("term", "")
+
 	organizationId := ctx.URLParamDefault("organization_id", "")
 
 	if organizationId == "" {
@@ -168,7 +171,26 @@ func (lc *LeaguesController) FetchLeagues(ctx iris.Context) {
 		return
 	}
 
-	leagues, err := leagueService.FetchLeagues(authenticatedUser.Id, organizationId)
+	limit, _ := ctx.URLParamInt("limit")
+	if limit < 0 {
+		limit = 50
+	}
+
+	offset, _ := ctx.URLParamInt("offset")
+	if offset < 0 {
+		offset = 0
+	}
+
+	var searchDTO = dtos.LeagueSearchDTO{
+		OrganizationID: organizationId,
+		BaseSearchDTO: dtos.BaseSearchDTO{
+			Limit:  limit,
+			Offset: offset,
+			Term:   searchTerm,
+		},
+	}
+
+	leagues, err := leagueService.Search(authenticatedUser.Id, searchDTO)
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
