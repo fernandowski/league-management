@@ -55,7 +55,12 @@ func (ss *SeasonService) PlanSchedule() error {
 	return nil
 }
 
-func (ss *SeasonService) Search(orgOwnerID, leagueID string, searchDTO dtos.SearchSeasonDTO) []interface{} {
-	var results = seasonRepository.Search(orgOwnerID, leagueID, searchDTO)
-	return results
+func (ss *SeasonService) Search(orgOwnerID, leagueID string, searchDTO dtos.SearchSeasonDTO) map[string]interface{} {
+	var data, total = seasonRepository.Search(orgOwnerID, leagueID, searchDTO)
+
+	result := make(map[string]interface{})
+	result["data"] = data
+	result["total"] = total
+
+	return result
 }
