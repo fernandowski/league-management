@@ -153,15 +153,13 @@ func updateLeague(league *domain.League) error {
 	return nil
 }
 
-func (lr *LeagueRepository) FetchAll(searchDTO dtos.LeagueSearchDTO) ([]domain.League, error) {
+func (lr *LeagueRepository) Search(searchDTO dtos.LeagueSearchDTO) (*map[string]interface{}, error) {
 	connection := database.GetConnection()
 	queryBuilder := QueryBuilder{}
 
 	sql := "SELECT " +
-		"league_management.leagues.id," +
-		"league_management.leagues.name," +
-		"league_management.leagues.user_id," +
-		"league_management.leagues.organization_id " +
+		"league_management.leagues.id, " +
+		"league_management.leagues.name " +
 		"FROM league_management.leagues " +
 		"JOIN league_management.organizations ON league_management.organizations.id = league_management.leagues.organization_id "
 
@@ -179,16 +177,19 @@ func (lr *LeagueRepository) FetchAll(searchDTO dtos.LeagueSearchDTO) ([]domain.L
 
 	defer rows.Close()
 
-	var leagues []domain.League
+	var leagues []interface{}
 
 	for rows.Next() {
-		var id, name, userId, organizationId string
+		var id, name string
 
-		if err := rows.Scan(&id, &name, &userId, &organizationId); err != nil {
+		if err := rows.Scan(&id, &name); err != nil {
 			return nil, err
 		}
 
-		league := domain.NewLeague(id, name, userId, organizationId)
+		league := make(map[string]interface{})
+		league["id"] = id
+		league["name"] = name
+		league["team_ids"] = []interface{}{}
 
 		leagues = append(leagues, league)
 	}
@@ -197,7 +198,41 @@ func (lr *LeagueRepository) FetchAll(searchDTO dtos.LeagueSearchDTO) ([]domain.L
 		return nil, rows.Err()
 	}
 
-	return leagues, nil
+	total, err := searchCount(searchDTO)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]interface{})
+	result["data"] = leagues
+	result["total"] = total
+	return &result, nil
+}
+
+func searchCount(searchDTO dtos.LeagueSearchDTO) (int, error) {
+	connection := database.GetConnection()
+	queryBuilder := QueryBuilder{}
+
+	sql := "SELECT " +
+		"COUNT(*) AS total " +
+		"FROM league_management.leagues " +
+		"JOIN league_management.organizations ON league_management.organizations.id = league_management.leagues.organization_id "
+
+	queryBuilder.SetQuery(sql)
+
+	queryBuilder.AddFilter("league_management.organizations.id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), searchDTO.OrganizationID)
+
+	sql, parameters := queryBuilder.BuildQuery()
+	row := connection.QueryRow(context.Background(), sql, parameters...)
+
+	var count int
+
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
 
 func (lr *LeagueRepository) FetchLeagueMembers(leagueId string) ([]interface{}, error) {

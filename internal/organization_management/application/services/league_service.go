@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"league-management/internal/organization_management/domain"
 	"league-management/internal/organization_management/domain/domainservices"
 	"league-management/internal/organization_management/infrastructure/repositories"
 	"league-management/internal/shared/dtos"
@@ -100,7 +99,7 @@ func (ls *LeagueService) RevokeTeamMembership(orgOwnerID, leagueId, membershipId
 	return nil
 }
 
-func (ls *LeagueService) Search(userId string, searchDTO dtos.LeagueSearchDTO) ([]domain.League, error) {
+func (ls *LeagueService) Search(userId string, searchDTO dtos.LeagueSearchDTO) (*map[string]interface{}, error) {
 	user, _ := userRepo.FindById(userId)
 
 	if user == nil {
@@ -116,7 +115,7 @@ func (ls *LeagueService) Search(userId string, searchDTO dtos.LeagueSearchDTO) (
 		return nil, errors.New("does not belong to user")
 	}
 
-	leagues, err := leagueRepository.FetchAll(searchDTO)
+	leagues, err := leagueRepository.Search(searchDTO)
 
 	if err != nil {
 		return nil, err

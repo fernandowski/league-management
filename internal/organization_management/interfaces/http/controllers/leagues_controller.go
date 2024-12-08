@@ -198,7 +198,7 @@ func (lc *LeaguesController) FetchLeagues(ctx iris.Context) {
 		return
 	}
 
-	ctx.JSON(leaguesToRequestResponse(leagues))
+	ctx.JSON(leagues)
 }
 
 func (lc *LeaguesController) FetchLeaguesMembers(ctx iris.Context) {
