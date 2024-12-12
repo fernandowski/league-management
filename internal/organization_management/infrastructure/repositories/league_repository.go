@@ -179,6 +179,11 @@ func (lr *LeagueRepository) Search(searchDTO dtos.LeagueSearchDTO) (*map[string]
 
 	var leagues []interface{}
 
+	leagueMemberCount, err := organizationLeagueMembersCount(searchDTO)
+	if err != nil {
+		return nil, err
+	}
+
 	for rows.Next() {
 		var id, name string
 
@@ -190,6 +195,7 @@ func (lr *LeagueRepository) Search(searchDTO dtos.LeagueSearchDTO) (*map[string]
 		league["id"] = id
 		league["name"] = name
 		league["team_ids"] = []interface{}{}
+		league["total_members"] = leagueMemberCount[id]
 
 		leagues = append(leagues, league)
 	}
@@ -233,6 +239,39 @@ func searchCount(searchDTO dtos.LeagueSearchDTO) (int, error) {
 	}
 
 	return count, nil
+}
+
+func organizationLeagueMembersCount(searchDto dtos.LeagueSearchDTO) (map[string]int, error) {
+	connection := database.GetConnection()
+
+	sql := `SELECT leagues.id, organizations.id, count(*) as total_members
+			FROM organizations
+			JOIN leagues ON leagues.organization_id = organizations.id
+			JOIN league_teams ON league_teams.league_id = leagues.id
+			WHERE organizations.id=$1
+			GROUP BY 1, 2`
+
+	leagueTeamCount := make(map[string]int)
+
+	rows, err := connection.Query(context.Background(), sql, searchDto.OrganizationID)
+	defer rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var leagueId, organizationId string
+		var totalMembers int
+
+		if err := rows.Scan(&leagueId, &organizationId, &totalMembers); err != nil {
+			return nil, err
+		}
+
+		leagueTeamCount[leagueId] = totalMembers
+	}
+
+	return leagueTeamCount, nil
 }
 
 func (lr *LeagueRepository) FetchLeagueMembers(leagueId string) ([]interface{}, error) {
