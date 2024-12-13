@@ -146,3 +146,26 @@ func (ls *LeagueService) FetchLeagueMembers(leagueId, userId string) ([]interfac
 
 	return results, nil
 }
+
+func (ls *LeagueService) Details(userId, leagueId string) (map[string]interface{}, error) {
+	league, err := leagueRepository.FindById(leagueId)
+	if err != nil {
+		return nil, errors.New("league does not exist")
+	}
+
+	organization, err := organizationRepo.FindById(league.OrganizationId)
+	if err != nil {
+		return nil, err
+	}
+
+	if belongs := organization.BelongsToOwner(userId); !belongs {
+		return nil, errors.New("does not belong to user")
+	}
+
+	results, err := leagueRepository.FetchLeagueDetails(*league)
+
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
+}

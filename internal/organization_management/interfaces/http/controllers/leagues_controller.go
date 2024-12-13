@@ -228,3 +228,31 @@ func (lc *LeaguesController) FetchLeaguesMembers(ctx iris.Context) {
 
 	ctx.JSON(result)
 }
+
+func (lc *LeaguesController) FetchLeagueDetails(ctx iris.Context) {
+	leagueId := ctx.Params().GetDefault("league_id", "").(string)
+	if leagueId == "" {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "missing league_id"})
+		return
+	}
+
+	value := ctx.Values().Get("user")
+	authenticatedUser, ok := value.(*domain2.User)
+
+	if !ok {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "No Authentication"})
+		return
+	}
+
+	league, err := leagueService.Details(authenticatedUser.Id, leagueId)
+
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(league)
+}
