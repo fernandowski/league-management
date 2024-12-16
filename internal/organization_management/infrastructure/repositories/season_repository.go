@@ -18,9 +18,9 @@ func NewSeasonRepository() *SeasonRepository {
 func (sr *SeasonRepository) Save(season *domain.Season) error {
 	connection := database.GetConnection()
 
-	sql := `INSERT INTO seasons (name, league_id) VALUES ($1, $2);`
+	sql := `INSERT INTO seasons (name, league_id, status) VALUES ($1, $2, $3);`
 
-	_, err := connection.Exec(context.Background(), sql, season.Name, season.LeagueId)
+	_, err := connection.Exec(context.Background(), sql, season.Name, season.LeagueId, season.Status)
 	if err != nil {
 		return err
 	}

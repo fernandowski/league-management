@@ -5,10 +5,29 @@ import (
 	"strings"
 )
 
+//     'pending',
+//    'planned',
+//    'in_progress',
+//    'finished',
+//    'paused',
+//    'undefined'
+
+type SeasonStatus string
+
+const (
+	SeasonStatusPending    SeasonStatus = "pending"
+	SeasonStatusPlanned    SeasonStatus = "planned"
+	SeasonStatusInProgress SeasonStatus = "in_progress"
+	SeasonStatusPaused     SeasonStatus = "paused"
+	SeasonStatusFinished   SeasonStatus = "finished"
+	SeasonStatusUndefined  SeasonStatus = "undefined"
+)
+
 type Season struct {
 	ID             string
 	LeagueId       string
 	Name           string
+	Status         SeasonStatus
 	Rounds         []Round
 	MatchLocations []MatchLocation
 }
@@ -22,7 +41,7 @@ func NewSeason(name, leagueID string) (*Season, error) {
 		return nil, errors.New("name cannot be empty")
 	}
 
-	return &Season{ID: "", Name: name, LeagueId: leagueID}, nil
+	return &Season{ID: "", Name: name, LeagueId: leagueID, Status: SeasonStatusPending}, nil
 }
 
 func (s *Season) ScheduleRounds(league League) error {

@@ -1,8 +1,7 @@
 package services
 
 import (
-	"errors"
-	"league-management/internal/organization_management/domain"
+	"league-management/internal/organization_management/domain/domainservices"
 	"league-management/internal/organization_management/infrastructure/repositories"
 	"league-management/internal/shared/dtos"
 )
@@ -34,11 +33,7 @@ func (ss *SeasonService) AddNewSeason(orgOwnerID, leagueID, seasonName string) e
 		return err
 	}
 
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return errors.New("only organization owner allowed to Add a new season")
-	}
-
-	newSeason, err := domain.NewSeason(seasonName, *league.Id)
+	newSeason, err := domainservices.CreateSeason(organization, league, orgOwnerID, seasonName)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ type League struct {
 	Name           string
 	OwnerId        string
 	OrganizationId string
+	ActiveSeason   string
 	Memberships    []LeagueMembership
 }
 
@@ -52,4 +53,11 @@ func (l *League) RemoveMembership(membershipId string) (*League, error) {
 	league.Memberships = memberships
 
 	return league, nil
+}
+
+func (l *League) HasActiveSeason() bool {
+	if l.ActiveSeason == "" {
+		return false
+	}
+	return true
 }

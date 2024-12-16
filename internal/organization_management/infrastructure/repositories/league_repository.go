@@ -22,24 +22,33 @@ func NewLeagueRepository() LeagueRepository {
 func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 	connection := database.GetConnection()
 
-	sql := "SELECT id, name, user_id, organization_id, created_at, updated_at " +
-		"FROM league_management.leagues " +
-		"WHERE id=$1"
+	sql := `SELECT 
+    		leagues.id,
+    		leagues.name,
+    		leagues.user_id,
+    		leagues.organization_id,
+    		leagues.created_at,
+    		leagues.updated_at,
+    		seasons.id as season_status
+		FROM leagues
+		LEFT JOIN seasons ON seasons.league_id=leagues.id AND seasons.status='pending'
+		WHERE leagues.id=$1`
 
 	var id string
 	var name string
 	var ownerId string
 	var organizationId string
+	var seasonId *string
 	var dateCreated time.Time
 	var dateUpdated time.Time
 
-	err := connection.QueryRow(context.Background(), sql, leagueId).Scan(&id, &name, &ownerId, &organizationId, &dateCreated, &dateUpdated)
+	err := connection.QueryRow(context.Background(), sql, leagueId).Scan(&id, &name, &ownerId, &organizationId, &dateCreated, &dateUpdated, &seasonId)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
 		}
-		panic(err.Error())
+		return nil, err
 	}
 
 	sql = `SELECT id, team_id FROM league_teams WHERE league_id=$1`
@@ -61,13 +70,20 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 		memberships = append(memberships, domain.LeagueMembership{ID: id, TeamID: teamId})
 	}
 
-	return &domain.League{
+	league := domain.League{
 		Id:             &id,
 		Name:           name,
 		OwnerId:        ownerId,
 		OrganizationId: organizationId,
 		Memberships:    memberships,
-	}, nil
+		ActiveSeason:   "",
+	}
+
+	if seasonId != nil {
+		league.ActiveSeason = *seasonId
+	}
+
+	return &league, nil
 }
 
 func (lr *LeagueRepository) Save(league *domain.League) error {
@@ -317,11 +333,15 @@ func (lr *LeagueRepository) FetchLeagueMembers(leagueId string) ([]interface{}, 
 func (lr *LeagueRepository) FetchLeagueDetails(league domain.League) (map[string]interface{}, error) {
 	connection := database.GetConnection()
 
-	sql := `SELECT leagues.id, leagues.name FROM leagues where id=$1;`
+	sql := `SELECT leagues.id, leagues.name, seasons.name as season_name, seasons.id as season_id
+			FROM leagues 
+			LEFT JOIN seasons ON seasons.league_id=leagues.id AND seasons.status='pending'
+			WHERE leagues.id=$1;`
 
 	var leagueId, leagueName string
+	var seasonId, seasonName *string
 
-	err := connection.QueryRow(context.Background(), sql, *league.Id).Scan(&leagueId, &leagueName)
+	err := connection.QueryRow(context.Background(), sql, *league.Id).Scan(&leagueId, &leagueName, &seasonId, &seasonName)
 
 	if err != nil {
 		return nil, err
@@ -335,8 +355,16 @@ func (lr *LeagueRepository) FetchLeagueDetails(league domain.League) (map[string
 	leagueProjection := make(map[string]interface{})
 	leagueProjection["name"] = leagueName
 	leagueProjection["id"] = leagueId
-	leagueProjection["season"] = nil
 	leagueProjection["active_members"] = leagueMembershipCount[*league.Id]
+	leagueProjection["season"] = nil
+
+	if seasonId != nil {
+		seasonProjection := make(map[string]string)
+		seasonProjection["id"] = *seasonId
+		seasonProjection["name"] = *seasonName
+		seasonProjection["status"] = "active"
+		leagueProjection["season"] = seasonProjection
+	}
 
 	return leagueProjection, nil
 }
