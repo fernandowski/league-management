@@ -6,7 +6,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
-	"log"
 	"time"
 )
 
@@ -71,7 +70,6 @@ func (ur *OrganizationRepository) Save(o *domain.Organization) error {
 
 	_, err := pool.Exec(context.Background(), sql, o.Name, o.OrganizationOwnerId)
 	if err != nil {
-		log.Println(err)
 	}
 
 	return err

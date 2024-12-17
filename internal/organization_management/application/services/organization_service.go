@@ -5,7 +5,6 @@ import (
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/organization_management/infrastructure/repositories"
 	pg "league-management/internal/user_management/infrastructure/repositories/postgres"
-	"log"
 )
 
 type OrganizationService struct {
@@ -31,7 +30,6 @@ func (os *OrganizationService) FetchOrganizations(ownerId string) ([]domain.Orga
 	}
 
 	organizations, err := organizationRepo.FetchAll(ownerId)
-	log.Print(organizations)
 
 	if err != nil {
 		return nil, err

@@ -6,7 +6,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"league-management/internal/shared/database"
 	"league-management/internal/user_management/domain/user"
-	"log"
 )
 
 type UserRepository struct{}
@@ -22,7 +21,6 @@ func (ur *UserRepository) Save(u *domain.User) error {
 
 	_, err := pool.Exec(context.Background(), sql, u.Email, u.PasswordHash)
 	if err != nil {
-		log.Println(err)
 	}
 
 	return err

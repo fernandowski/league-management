@@ -4,7 +4,6 @@ import (
 	"github.com/kataras/iris/v12"
 	"league-management/internal/user_management/application/service"
 	"league-management/internal/user_management/infrastructure/dto"
-	"log"
 )
 
 type UserController struct {
@@ -32,7 +31,6 @@ func (uc *UserController) Register(ctx iris.Context) {
 
 	createdUser, err := uc.userService.RegisterUser(body.Email, body.Password)
 	if err != nil {
-		log.Print(err)
 		ctx.StatusCode(iris.StatusConflict)
 		ctx.JSON(iris.Map{"error": err.Error()})
 		return
@@ -53,7 +51,6 @@ func (uc *UserController) Login(ctx iris.Context) {
 
 	jwt, err := uc.userService.Login(body.Email, body.Password)
 	if err != nil {
-		log.Print(err)
 		ctx.StatusCode(iris.StatusConflict)
 		ctx.JSON(iris.Map{"error": err.Error()})
 		return
