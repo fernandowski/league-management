@@ -341,7 +341,7 @@ func (lr *LeagueRepository) FetchLeagueDetails(league domain.League) (map[string
 	var leagueId, leagueName string
 	var seasonId, seasonName *string
 
-	err := connection.QueryRow(context.Background(), sql, *league.Id).Scan(&leagueId, &leagueName, &seasonId, &seasonName)
+	err := connection.QueryRow(context.Background(), sql, *league.Id).Scan(&leagueId, &leagueName, &seasonName, &seasonId)
 
 	if err != nil {
 		return nil, err
