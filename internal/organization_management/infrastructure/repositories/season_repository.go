@@ -208,6 +208,7 @@ func (sr *SeasonRepository) FetchDetails(seasonID string) (map[string]interface{
 	sql := `SELECT
 				seasons.id as season_id,
 				seasons.name as season_name,
+				seasons.status as season_status,
 				season_schedules.id as match_id,
 				season_schedules.round as round,
 				away_team.name as away_team_name,
@@ -225,7 +226,7 @@ func (sr *SeasonRepository) FetchDetails(seasonID string) (map[string]interface{
 		return nil, err
 	}
 
-	var seasonName, seasonId string
+	var seasonName, seasonId, seasonStatus string
 	var round *string
 	var matchID, awayTeam, homeTeam *string
 
@@ -233,7 +234,7 @@ func (sr *SeasonRepository) FetchDetails(seasonID string) (map[string]interface{
 
 	for rows.Next() {
 
-		if err := rows.Scan(&seasonId, &seasonName, &matchID, &round, &awayTeam, &homeTeam); err != nil {
+		if err := rows.Scan(&seasonId, &seasonName, &seasonStatus, &matchID, &round, &awayTeam, &homeTeam); err != nil {
 			return nil, err
 		}
 
@@ -265,6 +266,7 @@ func (sr *SeasonRepository) FetchDetails(seasonID string) (map[string]interface{
 	result := map[string]interface{}{
 		"id":     seasonId,
 		"name":   seasonName,
+		"status": seasonStatus,
 		"rounds": map[string]interface{}{},
 	}
 	var rounds []interface{}
