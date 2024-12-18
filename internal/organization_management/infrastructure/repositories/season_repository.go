@@ -203,6 +203,84 @@ func (sr *SeasonRepository) Search(orgOwnerID, leagueID string, searchDTO dtos.S
 	return results, total
 }
 
+func (sr *SeasonRepository) FetchDetails(seasonID string) (map[string]interface{}, error) {
+	connection := database.GetConnection()
+	sql := `SELECT
+				seasons.id as season_id,
+				seasons.name as season_name,
+				season_schedules.id as match_id,
+				season_schedules.round as round,
+				away_team.name as away_team_name,
+			   	home_team.name as home_team_name
+			FROM seasons
+			LEFT JOIN season_schedules on seasons.id = season_schedules.season_id
+			LEFT JOIN teams away_team on  season_schedules.away_team_id = away_team.id
+			LEFT JOIN teams home_team on season_schedules.home_team_id = home_team.id
+			WHERE seasons.id =$1 AND seasons.status='planned'::season_status;`
+
+	rows, err := connection.Query(context.Background(), sql, seasonID)
+	defer rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var seasonName, seasonId string
+	var round *string
+	var matchID, awayTeam, homeTeam *string
+
+	matchesMap := make(map[string][]interface{})
+
+	for rows.Next() {
+
+		if err := rows.Scan(&seasonId, &seasonName, &matchID, &round, &awayTeam, &homeTeam); err != nil {
+			return nil, err
+		}
+
+		if matchID != nil {
+			matches, exists := matchesMap[*round]
+			homeTeamName := "bye"
+			awayTeamName := "bye"
+
+			if homeTeam != nil {
+				homeTeamName = *homeTeam
+			}
+			if awayTeam != nil {
+				awayTeamName = *awayTeam
+			}
+
+			newMatch := map[string]interface{}{
+				"id":        matchID,
+				"home_team": homeTeamName,
+				"away_team": awayTeamName,
+			}
+			if exists {
+				matchesMap[*round] = append(matches, newMatch)
+			} else {
+				matchesMap[*round] = []interface{}{newMatch}
+			}
+		}
+	}
+
+	result := map[string]interface{}{
+		"id":     seasonId,
+		"name":   seasonName,
+		"rounds": map[string]interface{}{},
+	}
+	var rounds []interface{}
+
+	for key, value := range matchesMap {
+		round := map[string]interface{}{
+			"round_number": key,
+			"matches":      value,
+		}
+		rounds = append(rounds, round)
+	}
+
+	result["rounds"] = rounds
+
+	return result, nil
+}
 func getCount(orgOwnerID, leagueID string, searchDTO dtos.SearchSeasonDTO) int {
 	connection := database.GetConnection()
 	queryBuilder := QueryBuilder{}
