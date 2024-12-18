@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"github.com/google/uuid"
 	"strings"
 )
 
@@ -41,7 +42,7 @@ func NewSeason(name, leagueID string) (*Season, error) {
 		return nil, errors.New("name cannot be empty")
 	}
 
-	return &Season{ID: "", Name: name, LeagueId: leagueID, Status: SeasonStatusPending}, nil
+	return &Season{ID: uuid.New().String(), Name: name, LeagueId: leagueID, Status: SeasonStatusPending}, nil
 }
 
 func (s *Season) ScheduleRounds(league League) error {

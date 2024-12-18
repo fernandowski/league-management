@@ -87,9 +87,9 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 func (sr *SeasonRepository) Save(season *domain.Season) error {
 	connection := database.GetConnection()
 
-	sql := `INSERT INTO seasons (name, league_id, status) VALUES ($1, $2, $3);`
+	sql := `INSERT INTO seasons (id, name, league_id, status) VALUES ($1, $2, $3, $4);`
 
-	_, err := connection.Exec(context.Background(), sql, season.Name, season.LeagueId, season.Status)
+	_, err := connection.Exec(context.Background(), sql, season.ID, season.Name, season.LeagueId, season.Status)
 	if err != nil {
 		return err
 	}

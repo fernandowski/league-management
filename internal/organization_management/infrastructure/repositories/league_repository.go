@@ -333,13 +333,18 @@ func (lr *LeagueRepository) FetchLeagueMembers(leagueId string) ([]interface{}, 
 func (lr *LeagueRepository) FetchLeagueDetails(league domain.League) (map[string]interface{}, error) {
 	connection := database.GetConnection()
 
-	sql := `SELECT leagues.id, leagues.name, seasons.name as season_name, seasons.id as season_id, seasons.status as season_status
+	sql := `SELECT 
+    			leagues.id, 
+    			leagues.name, 
+    			seasons.name as season_name, 
+    			seasons.id as season_id, 
+    			seasons.status as season_status
 			FROM leagues 
 			LEFT JOIN seasons ON seasons.league_id=leagues.id AND seasons.status='pending'
 			WHERE leagues.id=$1;`
 
-	var leagueId, leagueName, seasonStatus string
-	var seasonId, seasonName *string
+	var leagueId, leagueName string
+	var seasonId, seasonName, seasonStatus *string
 
 	err := connection.QueryRow(context.Background(), sql, *league.Id).Scan(&leagueId, &leagueName, &seasonName, &seasonId, &seasonStatus)
 
@@ -362,7 +367,7 @@ func (lr *LeagueRepository) FetchLeagueDetails(league domain.League) (map[string
 		seasonProjection := make(map[string]string)
 		seasonProjection["id"] = *seasonId
 		seasonProjection["name"] = *seasonName
-		seasonProjection["status"] = seasonStatus
+		seasonProjection["status"] = *seasonStatus
 		leagueProjection["season"] = seasonProjection
 	}
 
