@@ -340,7 +340,7 @@ func (lr *LeagueRepository) FetchLeagueDetails(league domain.League) (map[string
     			seasons.id as season_id, 
     			seasons.status as season_status
 			FROM leagues 
-			LEFT JOIN seasons ON seasons.league_id=leagues.id AND seasons.status='pending'
+			LEFT JOIN seasons ON seasons.league_id=leagues.id AND seasons.status in ('pending', 'planned', 'in_progress', 'paused')
 			WHERE leagues.id=$1;`
 
 	var leagueId, leagueName string
