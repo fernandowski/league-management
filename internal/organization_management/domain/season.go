@@ -66,6 +66,8 @@ func (s *Season) ScheduleRounds(league League) error {
 		}
 		s.Rounds = append(s.Rounds, round)
 	}
+
+	s.Status = SeasonStatusPlanned
 	return nil
 }
 

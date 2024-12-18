@@ -6,6 +6,8 @@ import (
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
 	"league-management/internal/shared/dtos"
+	"log"
+	"strings"
 )
 
 type SeasonRepository struct {
@@ -36,6 +38,7 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 	rows, err := connection.Query(context.Background(), sql, seasonID)
 
 	if err != nil {
+		log.Print("error here")
 		return nil, err
 	}
 
@@ -54,11 +57,19 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 
 		if matchID != nil {
 			matches, exists := matchesMap[*round]
+			homeId := "bye"
+			awayId := "bye"
+
+			if homeTeamID != nil {
+				homeId = *homeTeamID
+			}
+			if awayTeamID != nil {
+				awayId = *awayTeamID
+			}
+			newMatch, _ := domain.NewMatch(homeId, awayId)
 			if exists {
-				newMatch, _ := domain.NewMatch(*homeTeamID, *awayTeamID)
 				matchesMap[*round] = append(matches, newMatch)
 			} else {
-				newMatch, _ := domain.NewMatch(*homeTeamID, *awayTeamID)
 				matchesMap[*round] = []domain.Match{newMatch}
 			}
 		}
@@ -87,11 +98,59 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 func (sr *SeasonRepository) Save(season *domain.Season) error {
 	connection := database.GetConnection()
 
-	sql := `INSERT INTO seasons (id, name, league_id, status) VALUES ($1, $2, $3, $4);`
+	sql := `INSERT INTO seasons (id, name, league_id, status) VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, league_id=EXCLUDED.league_id, status=EXCLUDED.status;`
 
 	_, err := connection.Exec(context.Background(), sql, season.ID, season.Name, season.LeagueId, season.Status)
 	if err != nil {
 		return err
+	}
+
+	values := []string{}
+	params := []interface{}{}
+	paramIndex := 1
+
+	if len(season.Rounds) > 0 {
+		matchSQL := `INSERT INTO season_schedules 
+                     (id, season_id, league_id, round, home_team_id, away_team_id, home_team_score, away_team_score) 
+                     VALUES %s 
+                     ON CONFLICT (id) DO UPDATE 
+                     SET league_id = EXCLUDED.league_id, 
+                         round = EXCLUDED.round, 
+                         home_team_id = EXCLUDED.home_team_id, 
+                         away_team_id = EXCLUDED.away_team_id, 
+                         home_team_score = EXCLUDED.home_team_score, 
+                         away_team_score = EXCLUDED.away_team_score;`
+
+		for _, round := range season.Rounds {
+			for _, match := range round.Matches {
+
+				parametrizedValues := fmt.Sprintf(
+					"($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+					paramIndex, paramIndex+1, paramIndex+2, paramIndex+3, paramIndex+4, paramIndex+5, paramIndex+6, paramIndex+7,
+				)
+				values = append(values, parametrizedValues)
+
+				params = append(
+					params,
+					match.ID,
+					season.ID,
+					season.LeagueId,
+					round.RoundNumber,
+					match.GetHomeTeam(),
+					match.GetAwayTeam(),
+					match.HomeTeamScore,
+					match.AwayTeamScore,
+				)
+				paramIndex += 8
+			}
+		}
+
+		query := fmt.Sprintf(matchSQL, strings.Join(values, ", "))
+		_, err = connection.Exec(context.Background(), query, params...)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

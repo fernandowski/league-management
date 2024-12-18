@@ -68,6 +68,7 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Len(t, season.Rounds, 3)
+		assert.Equal(t, season.Status, SeasonStatusPlanned)
 		assert.Equal(t, 1, firstRound.RoundNumber)
 		assert.Len(t, firstRound.Matches, 2)
 	})
@@ -108,6 +109,7 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Len(t, season.Rounds, 3)
+		assert.Equal(t, season.Status, SeasonStatusPlanned)
 		assert.Equal(t, 1, firstRound.RoundNumber)
 		assert.Len(t, firstRound.Matches, 2)
 
