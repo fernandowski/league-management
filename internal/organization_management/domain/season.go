@@ -48,6 +48,9 @@ func (s *Season) ScheduleRounds(league League) error {
 	if len(league.Memberships) < 2 {
 		return errors.New("at least two teams needed to plan season")
 	}
+	if s.Status != SeasonStatusPending {
+		return errors.New("only season in pending status can be planned")
+	}
 
 	matchUps := generateRoundRobin(league.Memberships)
 

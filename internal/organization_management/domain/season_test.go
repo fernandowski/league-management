@@ -11,6 +11,7 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 			ID:       "id-1",
 			LeagueId: "league-id-1",
 			Name:     "Test League",
+			Status:   SeasonStatusPending,
 			Rounds:   nil,
 		}
 
@@ -32,6 +33,7 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 			ID:       "id-1",
 			LeagueId: "league-id-1",
 			Name:     "Test League",
+			Status:   SeasonStatusPending,
 		}
 
 		member1 := LeagueMembership{
@@ -75,6 +77,7 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 			ID:       "id-1",
 			LeagueId: "league-id-1",
 			Name:     "Test League",
+			Status:   SeasonStatusPending,
 		}
 
 		member1 := LeagueMembership{

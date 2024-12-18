@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"league-management/internal/organization_management/domain/domainservices"
 	"league-management/internal/organization_management/infrastructure/repositories"
 	"league-management/internal/shared/dtos"
@@ -46,7 +47,36 @@ func (ss *SeasonService) AddNewSeason(orgOwnerID, leagueID, seasonName string) e
 	return nil
 }
 
-func (ss *SeasonService) PlanSchedule() error {
+func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
+	season, err := seasonRepository.FindByID(seasonID)
+	if err != nil {
+		return err
+	}
+
+	league, err := leagueRepository.FindById(season.LeagueId)
+	if err != nil {
+		return err
+	}
+
+	organization, err := organizationRepo.FindById(league.OrganizationId)
+	if err != nil {
+		return err
+	}
+
+	if !organization.BelongsToOwner(orgOwnerID) {
+		return errors.New("only org owner can plan schedule")
+	}
+
+	err = season.ScheduleRounds(*league)
+	if err != nil {
+		return err
+	}
+
+	err = seasonRepository.Save(season)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

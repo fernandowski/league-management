@@ -5,11 +5,15 @@ type Round struct {
 	Matches     []Match
 }
 
-func NewRound() Round {
+func NewRound(roundNumber int) Round {
 	return Round{
-		RoundNumber: 0,
+		RoundNumber: roundNumber,
 		Matches:     []Match{},
 	}
+}
+
+func (r *Round) AddMatches(matches []Match) *Round {
+	return &Round{RoundNumber: r.RoundNumber, Matches: matches}
 }
 
 func (r *Round) AddMatch(match Match) {
