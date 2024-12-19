@@ -2,11 +2,11 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
 	"league-management/internal/shared/dtos"
-	"log"
 	"strings"
 )
 
@@ -38,7 +38,6 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 	rows, err := connection.Query(context.Background(), sql, seasonID)
 
 	if err != nil {
-		log.Print("error here")
 		return nil, err
 	}
 
@@ -49,6 +48,10 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 	var seasonId, seasonName, leagueId, seasonStatus string
 	var matchID, homeTeamID, awayTeamID *string
 	var round, homeTeamScore, awayTeamScore *int
+
+	if !rows.Next() {
+		return nil, errors.New("season does not exist")
+	}
 
 	for rows.Next() {
 		if err := rows.Scan(&seasonId, &seasonName, &leagueId, &seasonStatus, &matchID, &round, &homeTeamID, &awayTeamID, &homeTeamScore, &awayTeamScore); err != nil {
