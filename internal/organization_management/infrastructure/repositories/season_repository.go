@@ -49,9 +49,7 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 	var matchID, homeTeamID, awayTeamID *string
 	var round, homeTeamScore, awayTeamScore *int
 
-	if !rows.Next() {
-		return nil, errors.New("season does not exist")
-	}
+	foundRows := false
 
 	for rows.Next() {
 		if err := rows.Scan(&seasonId, &seasonName, &leagueId, &seasonStatus, &matchID, &round, &homeTeamID, &awayTeamID, &homeTeamScore, &awayTeamScore); err != nil {
@@ -76,6 +74,11 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 				matchesMap[*round] = []domain.Match{newMatch}
 			}
 		}
+		foundRows = true
+	}
+
+	if !foundRows {
+		return nil, errors.New("no season found")
 	}
 
 	rounds := []domain.Round{}
@@ -220,7 +223,7 @@ func (sr *SeasonRepository) FetchDetails(seasonID string) (map[string]interface{
 			LEFT JOIN season_schedules on seasons.id = season_schedules.season_id
 			LEFT JOIN teams away_team on  season_schedules.away_team_id = away_team.id
 			LEFT JOIN teams home_team on season_schedules.home_team_id = home_team.id
-			WHERE seasons.id =$1 AND seasons.status='planned'::season_status;`
+			WHERE seasons.id =$1`
 
 	rows, err := connection.Query(context.Background(), sql, seasonID)
 	defer rows.Close()
@@ -235,6 +238,7 @@ func (sr *SeasonRepository) FetchDetails(seasonID string) (map[string]interface{
 
 	matchesMap := make(map[string][]interface{})
 
+	foundRows := false
 	for rows.Next() {
 
 		if err := rows.Scan(&seasonId, &seasonName, &seasonStatus, &matchID, &round, &awayTeam, &homeTeam); err != nil {
@@ -264,6 +268,11 @@ func (sr *SeasonRepository) FetchDetails(seasonID string) (map[string]interface{
 				matchesMap[*round] = []interface{}{newMatch}
 			}
 		}
+		foundRows = true
+	}
+
+	if !foundRows {
+		return nil, errors.New("season not found")
 	}
 
 	result := map[string]interface{}{
@@ -272,7 +281,7 @@ func (sr *SeasonRepository) FetchDetails(seasonID string) (map[string]interface{
 		"status": seasonStatus,
 		"rounds": map[string]interface{}{},
 	}
-	var rounds []interface{}
+	rounds := []interface{}{}
 
 	for key, value := range matchesMap {
 		round := map[string]interface{}{
