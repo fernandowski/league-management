@@ -14,7 +14,7 @@ type Match struct {
 	AssignedLocation MatchLocation
 }
 
-func NewMatch(homeTeamID, awayTeamID string) (Match, error) {
+func NewMatch(matchID *string, homeTeamID, awayTeamID string) (Match, error) {
 	if homeTeamID == "" {
 		return Match{}, errors.New("valid match must have a valid home team ID")
 	}
@@ -23,8 +23,13 @@ func NewMatch(homeTeamID, awayTeamID string) (Match, error) {
 		return Match{}, errors.New("valid match must have a valid away team ID")
 	}
 
+	id := uuid.New().String()
+	if matchID != nil {
+		id = *matchID
+	}
+
 	return Match{
-		ID:            uuid.New().String(),
+		ID:            id,
 		HomeTeamID:    homeTeamID,
 		AwayTeamID:    awayTeamID,
 		HomeTeamScore: 0,

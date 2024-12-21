@@ -67,7 +67,7 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 			if awayTeamID != nil {
 				awayId = *awayTeamID
 			}
-			newMatch, _ := domain.NewMatch(homeId, awayId)
+			newMatch, _ := domain.NewMatch(matchID, homeId, awayId)
 			if exists {
 				matchesMap[*round] = append(matches, newMatch)
 			} else {
