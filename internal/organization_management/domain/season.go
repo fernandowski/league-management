@@ -6,13 +6,6 @@ import (
 	"strings"
 )
 
-//     'pending',
-//    'planned',
-//    'in_progress',
-//    'finished',
-//    'paused',
-//    'undefined'
-
 type SeasonStatus string
 
 const (
@@ -69,6 +62,25 @@ func (s *Season) ScheduleRounds(league League) error {
 
 	s.Status = SeasonStatusPlanned
 	return nil
+}
+
+func (s *Season) Start() (*Season, error) {
+	if s.Status != SeasonStatusPlanned {
+		return nil, errors.New("season not in correct status must be pending")
+	}
+
+	if len(s.Rounds) == 0 {
+		return nil, errors.New("cannot start season without rounds planned")
+	}
+
+	newSeason := *s
+
+	newRounds := make([]Round, len(s.Rounds))
+	copy(newRounds, s.Rounds)
+	newSeason.Rounds = newRounds
+
+	newSeason.Status = SeasonStatusInProgress
+	return &newSeason, nil
 }
 
 func generateRoundRobin(leagueMembers []LeagueMembership) [][][]LeagueMembership {
