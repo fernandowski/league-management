@@ -125,6 +125,34 @@ func (sc *SeasonController) Schedule(ctx iris.Context) {
 	ctx.JSON(iris.Map{"status": "ok"})
 }
 
+func (sc *SeasonController) StartSeason(ctx iris.Context) {
+
+	seasonId := ctx.Params().GetDefault("season_id", "").(string)
+	if seasonId == "" {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "missing season_id"})
+		return
+	}
+
+	value := ctx.Values().Get("user")
+	authenticatedUser, ok := value.(*domain2.User)
+
+	if !ok {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "No Authentication"})
+		return
+	}
+
+	var err = seasonService.StartSeason(authenticatedUser.Id, seasonId)
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(iris.Map{"status": "ok"})
+}
+
 func (sc *SeasonController) SeasonDetails(ctx iris.Context) {
 
 	seasonId := ctx.Params().GetDefault("season_id", "").(string)

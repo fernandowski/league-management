@@ -80,6 +80,40 @@ func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
 	return nil
 }
 
+func (ss *SeasonService) StartSeason(orgOwnerID, seasonID string) error {
+	season, err := seasonRepository.FindByID(seasonID)
+	if err != nil {
+		return err
+	}
+
+	league, err := leagueRepository.FindById(season.LeagueId)
+	if err != nil {
+		return err
+	}
+
+	organization, err := organizationRepo.FindById(league.OrganizationId)
+	if err != nil {
+		return err
+	}
+
+	_, err = domainservices.OrganizationOwnerFromUserId(&orgOwnerID, organization)
+	if err != nil {
+		return err
+	}
+
+	startedSeason, err := season.Start()
+	if err != nil {
+		return err
+	}
+
+	err = seasonRepository.Save(startedSeason)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (ss *SeasonService) SeasonDetails(orgOwnerID, seasonID string) (map[string]interface{}, error) {
 	season, err := seasonRepository.FindByID(seasonID)
 	if err != nil {
