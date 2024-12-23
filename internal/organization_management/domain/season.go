@@ -73,14 +73,61 @@ func (s *Season) Start() (*Season, error) {
 		return nil, errors.New("cannot start season without rounds planned")
 	}
 
+	newSeason := s.copy()
+	newSeason.Status = SeasonStatusInProgress
+
+	return newSeason, nil
+}
+
+func (s *Season) ChangeMatchScore(matchID string, homeScore, awayScore int) (*Season, error) {
+	if s.Status != SeasonStatusInProgress {
+		return nil, errors.New("season not in correct status in_progress")
+	}
+
+	newSeason := s.copy()
+
+	match, roundIndex, matchIndex := newSeason.findMatch(matchID)
+	if match == nil {
+		return nil, errors.New("match does not exist")
+	}
+
+	changedMatch, err := match.ChangeScore(homeScore, awayScore)
+
+	if err != nil {
+		return nil, err
+	}
+
+	newSeason.Rounds[roundIndex].Matches[matchIndex] = *changedMatch
+	return newSeason, nil
+}
+
+func (s *Season) copy() *Season {
 	newSeason := *s
 
 	newRounds := make([]Round, len(s.Rounds))
-	copy(newRounds, s.Rounds)
+	for i, round := range s.Rounds {
+		newMatches := make([]Match, len(round.Matches))
+		copy(newMatches, round.Matches)
+		newRounds[i] = Round{
+			RoundNumber: round.RoundNumber,
+			Matches:     newMatches,
+		}
+	}
+
 	newSeason.Rounds = newRounds
 
-	newSeason.Status = SeasonStatusInProgress
-	return &newSeason, nil
+	return &newSeason
+}
+
+func (s *Season) findMatch(matchId string) (*Match, int, int) {
+	for roundIndex, round := range s.Rounds {
+		for matchIndex, match := range round.Matches {
+			if match.ID == matchId {
+				return &match, roundIndex, matchIndex
+			}
+		}
+	}
+	return nil, 0, 0
 }
 
 func generateRoundRobin(leagueMembers []LeagueMembership) [][][]LeagueMembership {

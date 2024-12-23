@@ -236,4 +236,113 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 		assert.Equal(t, SeasonStatusInProgress, newSeason.Status)
 		assert.Equal(t, SeasonStatusPlanned, season.Status)
 	})
+
+	t.Run("Change game score to negative number should fail", func(t *testing.T) {
+
+		testId1 := "test_id_2"
+		match1, _ := NewMatch(&testId1, "one", "two")
+
+		testId2 := "test_id_2"
+		match2, _ := NewMatch(&testId2, "one", "two")
+
+		round := NewRound(1)
+		round.Matches = []Match{match1, match2}
+
+		season := Season{
+			ID:       "id-1",
+			LeagueId: "league-id-1",
+			Name:     "Test League",
+			Rounds:   []Round{round},
+			Status:   SeasonStatusInProgress,
+		}
+
+		_, err := season.ChangeMatchScore(testId1, -1, -1)
+		assert.Error(t, err)
+	})
+
+	t.Run("Change game score of none-existent game should fail", func(t *testing.T) {
+		testId1 := "test_id_2"
+		match1, _ := NewMatch(&testId1, "one", "two")
+
+		testId2 := "test_id_2"
+		match2, _ := NewMatch(&testId2, "one", "two")
+
+		round := NewRound(1)
+		round.Matches = []Match{match1, match2}
+
+		season := Season{
+			ID:       "id-1",
+			LeagueId: "league-id-1",
+			Name:     "Test League",
+			Rounds:   []Round{round},
+			Status:   SeasonStatusInProgress,
+		}
+
+		_, err := season.ChangeMatchScore("test_id_3", -1, -1)
+		assert.Error(t, err)
+	})
+
+	t.Run("Change game score of not in progress season should fail", func(t *testing.T) {
+		testId1 := "test_id_2"
+		match1, _ := NewMatch(&testId1, "one", "two")
+
+		testId2 := "test_id_2"
+		match2, _ := NewMatch(&testId2, "one", "two")
+
+		round := NewRound(1)
+		round.Matches = []Match{match1, match2}
+
+		season := Season{
+			ID:       "id-1",
+			LeagueId: "league-id-1",
+			Name:     "Test League",
+			Rounds:   []Round{round},
+			Status:   SeasonStatusPending,
+		}
+
+		_, err := season.ChangeMatchScore(testId1, -1, -1)
+		assert.Error(t, err)
+	})
+
+	t.Run("Change game score should pass", func(t *testing.T) {
+		testId1 := "test_id_2"
+		match1, _ := NewMatch(&testId1, "one", "two")
+
+		testId2 := "test_id_2"
+		match2, _ := NewMatch(&testId2, "one", "two")
+
+		round := NewRound(1)
+		round.Matches = []Match{match1, match2}
+
+		season := Season{
+			ID:       "id-1",
+			LeagueId: "league-id-1",
+			Name:     "Test League",
+			Rounds:   []Round{round},
+			Status:   SeasonStatusInProgress,
+		}
+
+		changedSeason, _ := season.ChangeMatchScore(testId1, 2, 2)
+
+		var findMatch = func(season Season, matchID string) *Match {
+			for _, round := range season.Rounds {
+				for _, match := range round.Matches {
+					if matchID == testId1 {
+						return &match
+					}
+				}
+			}
+			return nil
+		}
+
+		previousMatch := findMatch(season, testId1)
+		currentMatch := findMatch(*changedSeason, testId1)
+
+		assert.NotNil(t, currentMatch)
+		assert.Equal(t, 2, currentMatch.HomeTeamScore)
+		assert.Equal(t, 2, currentMatch.AwayTeamScore)
+		assert.Equal(t, 0, previousMatch.HomeTeamScore)
+		assert.Equal(t, 0, previousMatch.AwayTeamScore)
+	})
+
 }

@@ -50,3 +50,19 @@ func (m *Match) GetAwayTeam() interface{} {
 	}
 	return m.AwayTeamID
 }
+
+func (m *Match) ChangeScore(homeTeamScore, awayTeamScore int) (*Match, error) {
+	if homeTeamScore < 0 {
+		return nil, errors.New("score must be greater than 0")
+	}
+
+	if awayTeamScore < 0 {
+		return nil, errors.New("score must be greater than 0")
+	}
+
+	newMatch := *m
+	newMatch.AwayTeamScore = awayTeamScore
+	newMatch.HomeTeamScore = homeTeamScore
+
+	return &newMatch, nil
+}
