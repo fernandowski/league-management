@@ -59,6 +59,7 @@ func initLeaguesRouter(router iris.Party) {
 		leaguesRouter.Post("/{league_id}/seasons/{season_id}/schedules", seasonController.Schedule)
 		leaguesRouter.Get("/{league_id}/seasons/{season_id}", seasonController.SeasonDetails)
 		leaguesRouter.Post("/{league_id}/seasons/{season_id}/start", seasonController.StartSeason)
+		leaguesRouter.Put("/seasons/{season_id}/match/score", seasonController.ChangeMatchScore)
 	}
 }
 

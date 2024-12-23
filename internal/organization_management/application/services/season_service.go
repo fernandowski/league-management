@@ -114,6 +114,40 @@ func (ss *SeasonService) StartSeason(orgOwnerID, seasonID string) error {
 	return nil
 }
 
+func (ss *SeasonService) ChangeMatchUpScore(orgOwnerID, seasonID string, changeScoreDTO dtos.ChangeGameScoreDTO) error {
+	season, err := seasonRepository.FindByID(seasonID)
+	if err != nil {
+		return err
+	}
+
+	league, err := leagueRepository.FindById(season.LeagueId)
+	if err != nil {
+		return err
+	}
+
+	organization, err := organizationRepo.FindById(league.OrganizationId)
+	if err != nil {
+		return err
+	}
+
+	_, err = domainservices.OrganizationOwnerFromUserId(&orgOwnerID, organization)
+	if err != nil {
+		return err
+	}
+
+	season, err = season.ChangeMatchScore(changeScoreDTO.MatchID, changeScoreDTO.HomeScore, changeScoreDTO.AwayScore)
+	if err != nil {
+		return err
+	}
+
+	err = seasonRepository.Save(season)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (ss *SeasonService) SeasonDetails(orgOwnerID, seasonID string) (map[string]interface{}, error) {
 	season, err := seasonRepository.FindByID(seasonID)
 	if err != nil {
