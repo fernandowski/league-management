@@ -21,6 +21,7 @@ func initRoutes(router iris.Party) {
 	initOrganizationRouter(router)
 	initLeaguesRouter(router)
 	initTeamsRouter(router)
+	initSeasonsController(router)
 }
 
 func initUserRouter(router iris.Party, uc controllers.UserController) {
@@ -59,7 +60,15 @@ func initLeaguesRouter(router iris.Party) {
 		leaguesRouter.Post("/{league_id}/seasons/{season_id}/schedules", seasonController.Schedule)
 		leaguesRouter.Get("/{league_id}/seasons/{season_id}", seasonController.SeasonDetails)
 		leaguesRouter.Post("/{league_id}/seasons/{season_id}/start", seasonController.StartSeason)
-		leaguesRouter.Put("/seasons/{season_id}/match/score", seasonController.ChangeMatchScore)
+		leaguesRouter.Put("/seasons/{season_id}/matches/score", seasonController.ChangeMatchScore)
+	}
+}
+
+func initSeasonsController(router iris.Party) {
+	var seasonController = controllers2.NewSeasonController()
+	var leaguesRouter = router.Party("/seasons", authorizationMiddleWare)
+	{
+		leaguesRouter.Put("/{season_id}/matches/score", seasonController.ChangeMatchScore)
 	}
 }
 
