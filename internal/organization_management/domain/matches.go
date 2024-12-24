@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"github.com/google/uuid"
+	"log"
 )
 
 type Match struct {
@@ -58,6 +59,11 @@ func (m *Match) ChangeScore(homeTeamScore, awayTeamScore int) (*Match, error) {
 
 	if awayTeamScore < 0 {
 		return nil, errors.New("score must be greater than 0")
+	}
+
+	log.Print(m)
+	if m.HomeTeamID == "bye" || m.AwayTeamID == "bye" {
+		return nil, errors.New("cannot change score of match for a bye week")
 	}
 
 	newMatch := *m

@@ -304,6 +304,28 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("Change game score of team playing against 'Bye' should fail", func(t *testing.T) {
+		testId1 := "test_id_1"
+		match1, _ := NewMatch(&testId1, "one", "bye")
+
+		testId2 := "test_id_2"
+		match2, _ := NewMatch(&testId2, "one", "two")
+
+		round := NewRound(1)
+		round.Matches = []Match{match1, match2}
+
+		season := Season{
+			ID:       "id-1",
+			LeagueId: "league-id-1",
+			Name:     "Test League",
+			Rounds:   []Round{round},
+			Status:   SeasonStatusInProgress,
+		}
+
+		_, err := season.ChangeMatchScore(testId1, 1, 1)
+		assert.Error(t, err)
+	})
+
 	t.Run("Change game score should pass", func(t *testing.T) {
 		testId1 := "test_id_2"
 		match1, _ := NewMatch(&testId1, "one", "two")
