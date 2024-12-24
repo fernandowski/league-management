@@ -185,3 +185,31 @@ func (ss *SeasonService) Search(orgOwnerID, leagueID string, searchDTO dtos.Sear
 
 	return result
 }
+
+func (ss *SeasonService) SeasonStandings(orgOwnerID, seasonID string) (map[string]interface{}, error) {
+	season, err := seasonRepository.FindByID(seasonID)
+	if err != nil {
+		return nil, err
+	}
+
+	league, err := leagueRepository.FindById(season.LeagueId)
+	if err != nil {
+		return nil, err
+	}
+
+	organization, err := organizationRepo.FindById(league.OrganizationId)
+	if err != nil {
+		return nil, err
+	}
+
+	if !organization.BelongsToOwner(orgOwnerID) {
+		return nil, errors.New("only org owner can view details")
+	}
+
+	result, err := seasonRepository.FetchSeasonStandings(season.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}

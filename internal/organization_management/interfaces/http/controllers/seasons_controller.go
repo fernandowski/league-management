@@ -217,3 +217,31 @@ func (sc *SeasonController) SeasonDetails(ctx iris.Context) {
 
 	ctx.JSON(result)
 }
+
+func (sc *SeasonController) SeasonStandings(ctx iris.Context) {
+
+	seasonId := ctx.Params().GetDefault("season_id", "").(string)
+	if seasonId == "" {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "missing season_id"})
+		return
+	}
+
+	value := ctx.Values().Get("user")
+	authenticatedUser, ok := value.(*domain2.User)
+
+	if !ok {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "No Authentication"})
+		return
+	}
+
+	result, err := seasonService.SeasonStandings(authenticatedUser.Id, seasonId)
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(result)
+}

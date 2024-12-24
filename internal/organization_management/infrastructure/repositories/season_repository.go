@@ -324,3 +324,89 @@ func getCount(orgOwnerID, leagueID string, searchDTO dtos.SearchSeasonDTO) int {
 
 	return total
 }
+
+func (sr *SeasonRepository) FetchSeasonStandings(seasonID string) (map[string]interface{}, error) {
+	connection := database.GetConnection()
+
+	sql := `WITH filtered_matches AS (
+		SELECT
+			home_team_id AS team_id,
+			home_team_score AS total_goals,
+			(home_team_score > away_team_score AND status='finished') AS win,
+			(home_team_score < away_team_score AND status='finished') AS losses,
+			(home_team_score = away_team_score AND status='finished') AS tie
+		FROM league_management.season_schedules
+		WHERE season_id = $1 AND away_team_id IS NOT NULL AND home_team_id IS NOT NULL
+
+    	UNION ALL
+
+    	SELECT
+        	away_team_id AS team_id,
+        	away_team_score AS total_goals,
+        	(away_team_score > home_team_score AND status='finished') AS win,
+        	(away_team_score < home_team_score AND status='finished') AS losses,
+        	(away_team_score = home_team_score AND status='finished') AS tie
+    	FROM league_management.season_schedules
+    	WHERE season_id = $1 AND away_team_id IS NOT NULL AND home_team_id IS NOT NULL
+	)
+	SELECT
+		team_id,
+		teams.name,
+		COUNT(*) AS games_played,
+		SUM(CASE WHEN win THEN 3 WHEN tie THEN 1 ELSE 0 END) AS total_points,
+		SUM(total_goals) AS total_goals,
+		SUM(CASE WHEN win THEN 1 ELSE 0 END) AS total_wins,
+		SUM(CASE WHEN losses THEN 1 ELSE 0 END) AS total_losses,
+		SUM(CASE WHEN tie THEN 1 ELSE 0 END) AS total_ties
+	FROM filtered_matches
+	JOIN teams ON teams.id=filtered_matches.team_id
+	WHERE team_id IS NOT NULL
+	GROUP BY 1, 2
+	ORDER BY total_points DESC;`
+
+	rows, err := connection.Query(context.Background(), sql, seasonID)
+	defer rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	foundRows := false
+
+	var teamId, teamName string
+	var gamesPlayed, totalPoints, totalGoals, totalWins, totalLosses, totalTies int
+
+	standingRecords := []interface{}{}
+
+	for rows.Next() {
+		if err := rows.Scan(&teamId, &teamName, &gamesPlayed, &totalPoints, &totalGoals, &totalWins, &totalLosses, &totalTies); err != nil {
+			return nil, err
+		}
+
+		foundRows = true
+
+		standingRecord := make(map[string]interface{})
+
+		standingRecord["team_id"] = teamId
+		standingRecord["team_name"] = teamName
+		standingRecord["games_played"] = gamesPlayed
+		standingRecord["total_points"] = totalPoints
+		standingRecord["total_goals"] = totalGoals
+		standingRecord["total_wins"] = totalWins
+		standingRecord["total_losses"] = totalLosses
+		standingRecord["total_ties"] = totalTies
+
+		standingRecords = append(standingRecords, standingRecord)
+	}
+
+	if !foundRows {
+		return nil, errors.New("no standings for season")
+	}
+
+	result := map[string]interface{}{
+		"season_id": seasonID,
+		"standings": standingRecords,
+	}
+
+	return result, nil
+}
