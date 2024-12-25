@@ -166,7 +166,7 @@ func (sr *SeasonRepository) Search(orgOwnerID, leagueID string, searchDTO dtos.S
 	connection := database.GetConnection()
 	queryBuilder := QueryBuilder{}
 
-	sql := `SELECT seasons.id, seasons.name, seasons.league_id
+	sql := `SELECT seasons.id, seasons.name, seasons.league_id, seasons.status
 			FROM organizations
 			JOIN leagues ON leagues.organization_id=organizations.id
 			JOIN seasons ON seasons.league_id=leagues.id`
@@ -175,6 +175,7 @@ func (sr *SeasonRepository) Search(orgOwnerID, leagueID string, searchDTO dtos.S
 
 	queryBuilder.AddFilter("organizations.user_id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), orgOwnerID)
 	queryBuilder.AddFilter("leagues.id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), leagueID)
+	queryBuilder.AddFilter("seasons.status!=$"+fmt.Sprint(len(queryBuilder.parameters)+1), "undefined")
 
 	if searchDTO.Term != "" {
 		queryBuilder.AddFilter("seasons.name=$"+fmt.Sprint(len(queryBuilder.parameters)+1), searchDTO.Term)
@@ -192,8 +193,8 @@ func (sr *SeasonRepository) Search(orgOwnerID, leagueID string, searchDTO dtos.S
 	}
 
 	for rows.Next() {
-		var seasonId, seasonName, leagueId string
-		if err := rows.Scan(&seasonId, &seasonName, &leagueId); err != nil {
+		var seasonId, seasonName, leagueId, status string
+		if err := rows.Scan(&seasonId, &seasonName, &leagueId, &status); err != nil {
 			return results, 0
 		}
 		season := make(map[string]string)
@@ -201,6 +202,7 @@ func (sr *SeasonRepository) Search(orgOwnerID, leagueID string, searchDTO dtos.S
 		season["id"] = seasonId
 		season["name"] = seasonName
 		season["league_id"] = leagueId
+		season["status"] = status
 
 		results = append(results, season)
 	}
