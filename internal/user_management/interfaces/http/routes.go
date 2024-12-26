@@ -69,6 +69,8 @@ func initSeasonsController(router iris.Party) {
 	var leaguesRouter = router.Party("/seasons", authorizationMiddleWare)
 	{
 		leaguesRouter.Put("/{season_id}/matches/score", seasonController.ChangeMatchScore)
+		leaguesRouter.Get("/{season_id}/matches", seasonController.FetchMatches)
+
 		leaguesRouter.Get("/{season_id}/standings", seasonController.SeasonStandings)
 	}
 }

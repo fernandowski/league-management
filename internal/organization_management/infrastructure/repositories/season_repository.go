@@ -412,3 +412,66 @@ func (sr *SeasonRepository) FetchSeasonStandings(seasonID string) (map[string]in
 
 	return result, nil
 }
+
+func (sr *SeasonRepository) FetchSeasonMatchUps(seasonID string) ([]interface{}, error) {
+	connection := database.GetConnection()
+
+	sql := `
+		SELECT
+			season_schedules.id AS match_id,
+			(CASE WHEN home_team.name IS NULL THEN 'Bye' ELSE home_team.name END)  AS home_team_name,
+			(CASE WHEN away_team.name IS NULL THEN 'Bye' ELSE away_team.name END) AS away_team_name,
+			season_schedules.round AS round,
+			season_schedules.home_team_score AS home_team_score,
+			season_schedules.away_team_score AS away_team_score,
+			season_schedules.status AS match_status
+		FROM season_schedules
+		LEFT JOIN teams AS home_team ON home_team.id=season_schedules.home_team_id
+		LEFT JOIN teams AS away_team ON away_team.id=season_schedules.away_team_id
+		WHERE season_id=$1;`
+
+	rows, err := connection.Query(context.Background(), sql, seasonID)
+	defer rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	matchesPerRound := map[int]interface{}{}
+
+	for rows.Next() {
+
+		var matchID, homeTeamName, awayTeamName, matchStatus string
+		var round, homeScore, awayScore int
+		if err := rows.Scan(&matchID, &homeTeamName, &awayTeamName, &round, &homeScore, &awayScore, &matchStatus); err != nil {
+			return nil, err
+		}
+
+		newMatch := map[string]interface{}{
+			"id":         matchID,
+			"home_team":  homeTeamName,
+			"away_team":  awayTeamName,
+			"home_score": homeScore,
+			"away_score": awayScore,
+			"round":      round,
+			"status":     matchStatus,
+		}
+
+		matches, exists := matchesPerRound[round]
+		if exists {
+			matchesPerRound[round] = append(matches.([]interface{}), newMatch)
+		} else {
+			matchesPerRound[round] = []interface{}{newMatch}
+		}
+	}
+
+	result := []interface{}{}
+	for key, value := range matchesPerRound {
+		result = append(result, map[string]interface{}{
+			"round":   key,
+			"matches": value,
+		})
+	}
+
+	return result, nil
+}
