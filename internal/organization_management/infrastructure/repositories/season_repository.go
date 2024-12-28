@@ -354,7 +354,7 @@ func (sr *SeasonRepository) FetchSeasonStandings(seasonID string) (map[string]in
 	SELECT
 		team_id,
 		teams.name,
-		COUNT(*) AS games_played,
+		SUM(case WHEN win OR tie OR losses THEN 1 ELSE 0 END) AS games_played,
 		SUM(CASE WHEN win THEN 3 WHEN tie THEN 1 ELSE 0 END) AS total_points,
 		SUM(total_goals) AS total_goals,
 		SUM(CASE WHEN win THEN 1 ELSE 0 END) AS total_wins,
