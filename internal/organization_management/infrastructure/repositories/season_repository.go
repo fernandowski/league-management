@@ -68,6 +68,9 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 				awayId = *awayTeamID
 			}
 			newMatch, _ := domain.NewMatch(matchID, homeId, awayId)
+			newMatch.AwayTeamScore = *awayTeamScore
+			newMatch.HomeTeamScore = *homeTeamScore
+
 			if exists {
 				matchesMap[*round] = append(matches, newMatch)
 			} else {
