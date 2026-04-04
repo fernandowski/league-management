@@ -23,7 +23,11 @@ docker compose up -d db
 
 ```bash
 npm run migrate:up
+NX_DAEMON=false npx nx run api:migrate
 ```
+
+These commands run migrations in Docker via `docker compose run migrate`.
+`nx serve api` and `nx run api:dev` start the API container, but they do not run migrations automatically.
 
 ### 4. Start the backend
 
@@ -32,6 +36,7 @@ NX_DAEMON=false npx nx serve api
 ```
 
 Backend runs on `http://localhost:8080`.
+This command now starts the backend inside the Docker Compose `app` container.
 
 ### 5. Start the frontend for browser development
 

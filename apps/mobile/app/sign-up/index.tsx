@@ -32,6 +32,10 @@ export default function SignUp() {
     const {control, handleSubmit, formState: {errors}} = useForm<SignUpData>(
         {
             resolver: joiResolver(schema),
+            defaultValues: {
+                email: '',
+                password: '',
+            },
         }
     );
     const {submitForm, error, loading} = useFormSubmit();

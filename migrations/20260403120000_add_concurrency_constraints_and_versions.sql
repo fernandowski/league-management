@@ -19,6 +19,21 @@ UPDATE league_management.seasons
 SET version = 1
 WHERE version IS NULL;
 
+WITH ranked_active_seasons AS (
+    SELECT id,
+           ROW_NUMBER() OVER (
+               PARTITION BY league_id
+               ORDER BY updated_at DESC, created_at DESC, id DESC
+           ) AS active_rank
+    FROM league_management.seasons
+    WHERE status IN ('pending', 'planned', 'in_progress', 'paused')
+)
+UPDATE league_management.seasons s
+SET status = 'undefined'
+FROM ranked_active_seasons ras
+WHERE s.id = ras.id
+  AND ras.active_rank > 1;
+
 CREATE UNIQUE INDEX IF NOT EXISTS seasons_one_active_per_league_idx
     ON league_management.seasons (league_id)
     WHERE status IN ('pending', 'planned', 'in_progress', 'paused');

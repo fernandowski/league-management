@@ -9,10 +9,11 @@ CREATE TABLE IF NOT EXISTS league_management.seasons
     updated_at timestamp WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_seasons_name ON league_management.seasons (name);
+CREATE INDEX IF NOT EXISTS idx_seasons_name ON league_management.seasons (name);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS league_management.seasons
+DROP INDEX IF EXISTS league_management.idx_seasons_name;
+DROP TABLE IF EXISTS league_management.seasons;
 -- +goose StatementEnd

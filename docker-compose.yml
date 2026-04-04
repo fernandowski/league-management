@@ -6,8 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: dev
+    working_dir: /workspace
     volumes:
-      - .:/app
+      - .:/workspace
     ports:
       - "8080:8080"
     environment:
@@ -17,12 +18,41 @@ services:
       POSTGRES_DB: league
       POSTGRES_DB_SCHEMA: league_management
       DB_CONNECTION_STRING: postgres://root:root@db:5432/league?sslmode=disable&search_path=league_management,public
-    command: air
+    command: air -c air.api.toml
     networks:
       - app-network
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: always
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: league
+      POSTGRES_DB_SCHEMA: league_management
+      DB_CONNECTION_STRING: postgres://root:root@db:5432/league?sslmode=disable&search_path=league_management,public
+    entrypoint:
+      - goose
+      - -dir
+      - ./migrations
+      - postgres
+      - postgres://root:root@db:5432/league?sslmode=disable&search_path=league_management,public
+    command:
+      - up
+    networks:
+      - app-network
+    depends_on:
+      db:
+        condition: service_healthy
 
 #  prod:
 #    build:
@@ -33,16 +63,22 @@ services:
 #      - "8080:8080"
 
   db:
-    image: postgres:latest
+    image: postgres:16
     restart: always
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
-      POSTGRES_DB: postgres
+      POSTGRES_DB: league
     ports:
       - '5432:5432'
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d league"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
     networks:
       - app-network
 

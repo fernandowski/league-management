@@ -10,11 +10,13 @@ CREATE TABLE IF NOT EXISTS league_management.team_user_roles
     updated_at      timestamp WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX unq_id_team_id_user_id_role ON league_management.team_user_roles (team_id, user_id, role);
-CREATE INDEX idx_team_id_user_id_role ON league_management.team_user_roles (team_id, user_id, role);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_team_user_roles_team_id_user_id_role ON league_management.team_user_roles (team_id, user_id, role);
+CREATE INDEX IF NOT EXISTS idx_team_user_roles_lookup ON league_management.team_user_roles (team_id, user_id, role);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS league_management.team_user_roles
+DROP INDEX IF EXISTS league_management.idx_team_user_roles_team_id_user_id_role;
+DROP INDEX IF EXISTS league_management.idx_team_user_roles_lookup;
+DROP TABLE IF EXISTS league_management.team_user_roles;
 -- +goose StatementEnd

@@ -1,0 +1,20 @@
+# Watch the backend app and shared Go packages from the workspace root.
+root = "."
+tmp_dir = "tmp/air-api"
+
+[build]
+cmd = "go build -buildvcs=false -o ./tmp/air-api/main ./apps/api || echo 'Build failed'"
+bin = "./tmp/air-api/main"
+delay = 2000
+kill_delay = 500
+poll = true
+poll_interval = 500
+log = "air.log"
+full_bin = "APP_ENV=dev ./tmp/air-api/main"
+include_dir = ["apps/api", "internal"]
+exclude_dir = ["tmp", "apps/mobile", "node_modules", ".git", ".idea", "dist"]
+
+[log]
+color = true
+time = true
+level = "debug"

@@ -14,13 +14,17 @@ CREATE TABLE IF NOT EXISTS league_management.season_schedules
     updated_at      timestamp WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_season_schedules_season_id ON league_management.season_schedules(season_id);
-CREATE INDEX idx_season_schedules_league_id ON league_management.season_schedules(league_id);
-CREATE INDEX idx_season_schedules_home_team_id ON league_management.season_schedules(home_team_id);
-CREATE INDEX idx_season_schedules_away_team_id ON league_management.season_schedules(away_team_id);
+CREATE INDEX IF NOT EXISTS idx_season_schedules_season_id ON league_management.season_schedules(season_id);
+CREATE INDEX IF NOT EXISTS idx_season_schedules_league_id ON league_management.season_schedules(league_id);
+CREATE INDEX IF NOT EXISTS idx_season_schedules_home_team_id ON league_management.season_schedules(home_team_id);
+CREATE INDEX IF NOT EXISTS idx_season_schedules_away_team_id ON league_management.season_schedules(away_team_id);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP INDEX IF EXISTS league_management.idx_season_schedules_season_id;
+DROP INDEX IF EXISTS league_management.idx_season_schedules_league_id;
+DROP INDEX IF EXISTS league_management.idx_season_schedules_home_team_id;
+DROP INDEX IF EXISTS league_management.idx_season_schedules_away_team_id;
 DROP TABLE IF EXISTS league_management.season_schedules;
 -- +goose StatementEnd

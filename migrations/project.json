@@ -11,13 +11,13 @@
     "migrate-up": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "make migrate-up"
+        "command": "docker compose run --rm --build migrate"
       }
     },
     "migrate-down": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "make migrate-down"
+        "command": "docker compose run --rm --build migrate down"
       }
     }
   }

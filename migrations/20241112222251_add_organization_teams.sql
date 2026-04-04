@@ -9,11 +9,13 @@ CREATE TABLE IF NOT EXISTS league_management.organization_teams
     updated_at      timestamp WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX unq_idx_organization_id_team_id ON league_management.organization_teams (organization_id, team_id);
-CREATE INDEX idx_organization_teams_organization_id ON league_management.organization_teams (organization_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_organization_teams_organization_id_team_id ON league_management.organization_teams (organization_id, team_id);
+CREATE INDEX IF NOT EXISTS idx_organization_teams_organization_id ON league_management.organization_teams (organization_id);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS league_management.organization_teams
+DROP INDEX IF EXISTS league_management.idx_organization_teams_organization_id_team_id;
+DROP INDEX IF EXISTS league_management.idx_organization_teams_organization_id;
+DROP TABLE IF EXISTS league_management.organization_teams;
 -- +goose StatementEnd

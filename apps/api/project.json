@@ -23,13 +23,19 @@
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "go run ./apps/api"
+        "command": "docker compose up --build app"
       }
     },
     "dev": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "air -c air.toml"
+        "command": "docker compose up --build app"
+      }
+    },
+    "migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx nx run migrations:migrate-up"
       }
     },
     "test": {

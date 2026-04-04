@@ -1,6 +1,6 @@
 import {fetchJWT, JwtIsExpired, removeJWT} from "@/util/jwt-manager";
 import {router} from "expo-router";
-import {bool} from "yup";
+import {Platform} from "react-native";
 
 export type RequestMethods = 'GET' | 'POST' | 'PUT' | 'DELETE';
 export interface RequestOptions {
@@ -10,7 +10,7 @@ export interface RequestOptions {
 }
 
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === "web" ? "http://localhost:8080" : undefined);
 
 
 export async function apiRequest(
@@ -18,6 +18,10 @@ export async function apiRequest(
     {method, headers, body}: RequestOptions,
     secure: boolean = true
 ) {
+    if (!API_URL) {
+        throw new Error("API base URL is not configured. Set EXPO_PUBLIC_API_URL.");
+    }
+
     const url: string = `${API_URL}${endpoint}`;
     const jwt: string = await fetchJWT() as string;
 
@@ -38,7 +42,6 @@ export async function apiRequest(
 
     const options: RequestInit = {
         method,
-        credentials: 'include',
         headers: defaultHeaders,
         ...(body && {body: JSON.stringify(body)}),
     };

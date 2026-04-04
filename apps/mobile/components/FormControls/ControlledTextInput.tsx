@@ -19,6 +19,7 @@ export default function ControlledTextInput<T extends FieldValues>({
         <Controller
             control={control}
             name={name}
+            defaultValue={value as any}
             rules={rules}
             render={({field: {onChange, onBlur, value}, fieldState: { error}}) => (
                 <>

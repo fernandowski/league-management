@@ -1,11 +1,12 @@
 package routes
 
 import (
-	"github.com/kataras/iris/v12"
 	controllers2 "league-management/internal/organization_management/interfaces/http/controllers"
 	"league-management/internal/user_management/application/service"
 	pg "league-management/internal/user_management/infrastructure/repositories/postgres"
 	"league-management/internal/user_management/interfaces/http/controllers"
+
+	"github.com/kataras/iris/v12"
 )
 
 func registerV1API(app *iris.Application) {
@@ -126,12 +127,11 @@ func Initialize() *iris.Application {
 	app := iris.New()
 
 	crs := func(ctx iris.Context) {
-		ctx.Header("Access-Control-Allow-Origin", "http://localhost:8081")
-		ctx.Header("Access-Control-Allow-Credentials", "true")
+		ctx.Header("Access-Control-Allow-Origin", "*")
 
 		if ctx.Method() == iris.MethodOptions {
 			ctx.Header("Access-Control-Allow-Methods", "POST, PUT, PATCH, DELETE, GET, OPTIONS")
-			ctx.Header("Access-Control-Allow-Headers", "Access-Control-Allow-Origin,Content-Type,auth")
+			ctx.Header("Access-Control-Allow-Headers", "*")
 			ctx.Header("Access-Control-Max-Age", "86400")
 			ctx.StatusCode(iris.StatusNoContent)
 			return
