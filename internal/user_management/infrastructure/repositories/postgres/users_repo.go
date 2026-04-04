@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/database"
 	"league-management/internal/user_management/domain/user"
 )
@@ -21,6 +23,10 @@ func (ur *UserRepository) Save(u *domain.User) error {
 
 	_, err := pool.Exec(context.Background(), sql, u.Email, u.PasswordHash)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return app_errors.ErrDuplicateResource
+		}
 	}
 
 	return err

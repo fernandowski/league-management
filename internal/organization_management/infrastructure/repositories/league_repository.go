@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"league-management/internal/organization_management/domain"
+	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/database"
 	"league-management/internal/shared/dtos"
 	"strings"
@@ -15,13 +17,18 @@ import (
 type LeagueRepository struct {
 }
 
-func NewLeagueRepository() LeagueRepository {
-	return LeagueRepository{}
+func NewLeagueRepository() *LeagueRepository {
+	return &LeagueRepository{}
 }
 
 func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
-	connection := database.GetConnection()
+	return lr.findByIdTx(context.Background(), database.GetConnection(), leagueId, false)
+}
 
+func (lr *LeagueRepository) findByIdTx(ctx context.Context, querier interface {
+	QueryRow(context.Context, string, ...interface{}) pgx.Row
+	Query(context.Context, string, ...interface{}) (pgx.Rows, error)
+}, leagueId string, forUpdate bool) (*domain.League, error) {
 	sql := `SELECT 
     		leagues.id,
     		leagues.name,
@@ -30,9 +37,14 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
     		leagues.created_at,
     		leagues.updated_at,
     		seasons.id as season_status
-		FROM leagues
-		LEFT JOIN seasons ON seasons.league_id=leagues.id AND seasons.status='pending'
+		FROM league_management.leagues
+		LEFT JOIN league_management.seasons
+			ON seasons.league_id=leagues.id
+			AND seasons.status IN ('pending', 'planned', 'in_progress', 'paused')
 		WHERE leagues.id=$1`
+	if forUpdate {
+		sql += ` FOR UPDATE`
+	}
 
 	var id string
 	var name string
@@ -42,7 +54,7 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 	var dateCreated time.Time
 	var dateUpdated time.Time
 
-	err := connection.QueryRow(context.Background(), sql, leagueId).Scan(&id, &name, &ownerId, &organizationId, &dateCreated, &dateUpdated, &seasonId)
+	err := querier.QueryRow(ctx, sql, leagueId).Scan(&id, &name, &ownerId, &organizationId, &dateCreated, &dateUpdated, &seasonId)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -51,9 +63,9 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 		return nil, err
 	}
 
-	sql = `SELECT id, team_id FROM league_teams WHERE league_id=$1`
+	sql = `SELECT id, team_id FROM league_management.league_teams WHERE league_id=$1 ORDER BY id`
 
-	rows, err := connection.Query(context.Background(), sql, leagueId)
+	rows, err := querier.Query(ctx, sql, leagueId)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +98,22 @@ func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
 	return &league, nil
 }
 
-func (lr *LeagueRepository) Save(league *domain.League) error {
+func (lr *LeagueRepository) WithLockedLeague(leagueId string, fn func(league *domain.League) error) error {
+	return database.WithTx(context.Background(), func(tx pgx.Tx) error {
+		league, err := lr.findByIdTx(context.Background(), tx, leagueId, true)
+		if err != nil {
+			return err
+		}
 
+		if err := fn(league); err != nil {
+			return err
+		}
+
+		return lr.saveTx(context.Background(), tx, league)
+	})
+}
+
+func (lr *LeagueRepository) Save(league *domain.League) error {
 	updateID := *league.Id
 	if updateID == "" {
 		if err := insertIntoLeagues(league); err != nil {
@@ -110,6 +136,10 @@ func insertIntoLeagues(league *domain.League) error {
 	_, err := connection.Exec(context.Background(), sql, league.Name, league.OwnerId, league.OrganizationId)
 
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return app_errors.ErrDuplicateResource
+		}
 		return err
 	}
 
@@ -117,12 +147,15 @@ func insertIntoLeagues(league *domain.League) error {
 }
 
 func updateLeague(league *domain.League) error {
-	connection := database.GetConnection()
+	return (&LeagueRepository{}).saveTx(context.Background(), database.GetConnection(), league)
+}
 
-	sql := `UPDATE leagues SET name=$1, user_id=$2 WHERE id = $3;`
+func (lr *LeagueRepository) saveTx(ctx context.Context, tx interface {
+	Exec(context.Context, string, ...interface{}) (pgconn.CommandTag, error)
+}, league *domain.League) error {
+	sql := `UPDATE league_management.leagues SET name=$1, user_id=$2 WHERE id = $3;`
 
-	_, err := connection.Exec(context.Background(), sql, league.Name, league.OwnerId, *league.Id)
-
+	_, err := tx.Exec(ctx, sql, league.Name, league.OwnerId, *league.Id)
 	if err != nil {
 		return err
 	}
@@ -137,11 +170,11 @@ func updateLeague(league *domain.League) error {
 			index++
 		}
 
-		sql = `INSERT INTO league_teams (id, league_id, team_id) VALUES ` +
+		sql = `INSERT INTO league_management.league_teams (id, league_id, team_id) VALUES ` +
 			strings.Join(values, ",") +
 			` ON CONFLICT (league_id, team_id) DO NOTHING`
 
-		_, err = connection.Exec(context.Background(), sql)
+		_, err = tx.Exec(ctx, sql)
 
 		if err != nil {
 			return err
@@ -155,12 +188,12 @@ func updateLeague(league *domain.League) error {
 			placeholders = append(placeholders, fmt.Sprintf("$%d", len(membershipValues)+1))
 			membershipValues = append(membershipValues, membership.ID)
 		}
-		sql = `DELETE FROM league_teams WHERE league_id=$1 AND id NOT IN (` + strings.Join(placeholders, ",") + `);`
+		sql = `DELETE FROM league_management.league_teams WHERE league_id=$1 AND id NOT IN (` + strings.Join(placeholders, ",") + `);`
 	} else {
-		sql = `DELETE FROM league_teams WHERE league_id=$1`
+		sql = `DELETE FROM league_management.league_teams WHERE league_id=$1`
 	}
 
-	_, err = connection.Exec(context.Background(), sql, membershipValues...)
+	_, err = tx.Exec(ctx, sql, membershipValues...)
 
 	if err != nil {
 		return err

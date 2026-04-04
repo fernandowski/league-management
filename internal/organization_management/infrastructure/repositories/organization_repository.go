@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"league-management/internal/organization_management/domain"
+	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/database"
 	"time"
 )
@@ -70,6 +72,10 @@ func (ur *OrganizationRepository) Save(o *domain.Organization) error {
 
 	_, err := pool.Exec(context.Background(), sql, o.Name, o.OrganizationOwnerId)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return app_errors.ErrDuplicateResource
+		}
 	}
 
 	return err

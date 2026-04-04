@@ -2,16 +2,24 @@ package services
 
 import (
 	"errors"
+	"league-management/internal/organization_management/domain"
 	"league-management/internal/organization_management/domain/domainservices"
 	"league-management/internal/organization_management/infrastructure/repositories"
 	"league-management/internal/shared/dtos"
 )
 
 type SeasonService struct {
+	seasonRepository seasonRepository
+	leagueRepository seasonLeagueRepository
+	organizationRepo seasonOrganizationRepository
 }
 
 func NewSeasonService() *SeasonService {
-	return &SeasonService{}
+	return &SeasonService{
+		seasonRepository: repositories.NewSeasonRepository(),
+		leagueRepository: repositories.NewLeagueRepository(),
+		organizationRepo: organizationRepo,
+	}
 }
 
 type SearchSeasonDTO struct {
@@ -21,15 +29,30 @@ type SearchSeasonDTO struct {
 	Offset   int
 }
 
-var seasonRepository = repositories.NewSeasonRepository()
+type seasonRepository interface {
+	FindByID(string) (*domain.Season, error)
+	Save(*domain.Season) error
+	Search(string, string, dtos.SearchSeasonDTO) ([]interface{}, int)
+	FetchDetails(string) (map[string]interface{}, error)
+	FetchSeasonStandings(string) (map[string]interface{}, error)
+	FetchSeasonMatchUps(string) ([]interface{}, error)
+}
+
+type seasonLeagueRepository interface {
+	FindById(string) (*domain.League, error)
+}
+
+type seasonOrganizationRepository interface {
+	FindById(string) (*domain.Organization, error)
+}
 
 func (ss *SeasonService) AddNewSeason(orgOwnerID, leagueID, seasonName string) error {
-	league, err := leagueRepository.FindById(leagueID)
+	league, err := ss.leagueRepository.FindById(leagueID)
 	if err != nil {
 		return err
 	}
 
-	organization, err := organizationRepo.FindById(league.OrganizationId)
+	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
 	if err != nil {
 		return err
 	}
@@ -39,7 +62,7 @@ func (ss *SeasonService) AddNewSeason(orgOwnerID, leagueID, seasonName string) e
 		return err
 	}
 
-	err = seasonRepository.Save(newSeason)
+	err = ss.seasonRepository.Save(newSeason)
 	if err != nil {
 		return err
 	}
@@ -48,17 +71,17 @@ func (ss *SeasonService) AddNewSeason(orgOwnerID, leagueID, seasonName string) e
 }
 
 func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
-	season, err := seasonRepository.FindByID(seasonID)
+	season, err := ss.seasonRepository.FindByID(seasonID)
 	if err != nil {
 		return err
 	}
 
-	league, err := leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueId)
 	if err != nil {
 		return err
 	}
 
-	organization, err := organizationRepo.FindById(league.OrganizationId)
+	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
 	if err != nil {
 		return err
 	}
@@ -72,7 +95,7 @@ func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
 		return err
 	}
 
-	err = seasonRepository.Save(season)
+	err = ss.seasonRepository.Save(season)
 	if err != nil {
 		return err
 	}
@@ -81,17 +104,17 @@ func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
 }
 
 func (ss *SeasonService) StartSeason(orgOwnerID, seasonID string) error {
-	season, err := seasonRepository.FindByID(seasonID)
+	season, err := ss.seasonRepository.FindByID(seasonID)
 	if err != nil {
 		return err
 	}
 
-	league, err := leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueId)
 	if err != nil {
 		return err
 	}
 
-	organization, err := organizationRepo.FindById(league.OrganizationId)
+	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
 	if err != nil {
 		return err
 	}
@@ -106,7 +129,7 @@ func (ss *SeasonService) StartSeason(orgOwnerID, seasonID string) error {
 		return err
 	}
 
-	err = seasonRepository.Save(startedSeason)
+	err = ss.seasonRepository.Save(startedSeason)
 	if err != nil {
 		return err
 	}
@@ -115,17 +138,17 @@ func (ss *SeasonService) StartSeason(orgOwnerID, seasonID string) error {
 }
 
 func (ss *SeasonService) ChangeMatchUpScore(orgOwnerID, seasonID string, changeScoreDTO dtos.ChangeGameScoreDTO) error {
-	season, err := seasonRepository.FindByID(seasonID)
+	season, err := ss.seasonRepository.FindByID(seasonID)
 	if err != nil {
 		return err
 	}
 
-	league, err := leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueId)
 	if err != nil {
 		return err
 	}
 
-	organization, err := organizationRepo.FindById(league.OrganizationId)
+	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
 	if err != nil {
 		return err
 	}
@@ -140,7 +163,7 @@ func (ss *SeasonService) ChangeMatchUpScore(orgOwnerID, seasonID string, changeS
 		return err
 	}
 
-	err = seasonRepository.Save(season)
+	err = ss.seasonRepository.Save(season)
 	if err != nil {
 		return err
 	}
@@ -149,17 +172,17 @@ func (ss *SeasonService) ChangeMatchUpScore(orgOwnerID, seasonID string, changeS
 }
 
 func (ss *SeasonService) SeasonDetails(orgOwnerID, seasonID string) (map[string]interface{}, error) {
-	season, err := seasonRepository.FindByID(seasonID)
+	season, err := ss.seasonRepository.FindByID(seasonID)
 	if err != nil {
 		return nil, err
 	}
 
-	league, err := leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueId)
 	if err != nil {
 		return nil, err
 	}
 
-	organization, err := organizationRepo.FindById(league.OrganizationId)
+	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +191,7 @@ func (ss *SeasonService) SeasonDetails(orgOwnerID, seasonID string) (map[string]
 		return nil, errors.New("only org owner can view details")
 	}
 
-	result, err := seasonRepository.FetchDetails(season.ID)
+	result, err := ss.seasonRepository.FetchDetails(season.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +200,7 @@ func (ss *SeasonService) SeasonDetails(orgOwnerID, seasonID string) (map[string]
 }
 
 func (ss *SeasonService) Search(orgOwnerID, leagueID string, searchDTO dtos.SearchSeasonDTO) map[string]interface{} {
-	var data, total = seasonRepository.Search(orgOwnerID, leagueID, searchDTO)
+	var data, total = ss.seasonRepository.Search(orgOwnerID, leagueID, searchDTO)
 
 	result := make(map[string]interface{})
 	result["data"] = data
@@ -187,17 +210,17 @@ func (ss *SeasonService) Search(orgOwnerID, leagueID string, searchDTO dtos.Sear
 }
 
 func (ss *SeasonService) SeasonStandings(orgOwnerID, seasonID string) (map[string]interface{}, error) {
-	season, err := seasonRepository.FindByID(seasonID)
+	season, err := ss.seasonRepository.FindByID(seasonID)
 	if err != nil {
 		return nil, err
 	}
 
-	league, err := leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueId)
 	if err != nil {
 		return nil, err
 	}
 
-	organization, err := organizationRepo.FindById(league.OrganizationId)
+	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +229,7 @@ func (ss *SeasonService) SeasonStandings(orgOwnerID, seasonID string) (map[strin
 		return nil, errors.New("only org owner can view details")
 	}
 
-	result, err := seasonRepository.FetchSeasonStandings(season.ID)
+	result, err := ss.seasonRepository.FetchSeasonStandings(season.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -214,17 +237,17 @@ func (ss *SeasonService) SeasonStandings(orgOwnerID, seasonID string) (map[strin
 	return result, nil
 }
 func (ss *SeasonService) SeasonMatchUps(orgOwnerID, seasonID string) ([]interface{}, error) {
-	season, err := seasonRepository.FindByID(seasonID)
+	season, err := ss.seasonRepository.FindByID(seasonID)
 	if err != nil {
 		return nil, err
 	}
 
-	league, err := leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueId)
 	if err != nil {
 		return nil, err
 	}
 
-	organization, err := organizationRepo.FindById(league.OrganizationId)
+	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +256,7 @@ func (ss *SeasonService) SeasonMatchUps(orgOwnerID, seasonID string) ([]interfac
 		return nil, errors.New("only org owner can view details")
 	}
 
-	result, err := seasonRepository.FetchSeasonMatchUps(season.ID)
+	result, err := ss.seasonRepository.FetchSeasonMatchUps(season.ID)
 	if err != nil {
 		return nil, err
 	}

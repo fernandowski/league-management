@@ -13,6 +13,7 @@ type Match struct {
 	HomeTeamScore    int
 	AwayTeamScore    int
 	AssignedLocation MatchLocation
+	RefereeID        string // New field to track assigned referee
 }
 
 func NewMatch(matchID *string, homeTeamID, awayTeamID string) (Match, error) {

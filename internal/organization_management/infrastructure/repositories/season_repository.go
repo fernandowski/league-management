@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"league-management/internal/organization_management/domain"
+	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/database"
 	"league-management/internal/shared/dtos"
 	"strings"
@@ -25,42 +28,41 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 				seasons.name as season_name,
 				seasons.league_id as league_id,
 				seasons.status as season_status,
+				seasons.version as version,
 				season_schedules.id as match_id,
 				season_schedules.round as round,
 				season_schedules.home_team_id as home_team_id,
 				season_schedules.away_team_id as away_team_id,
 				season_schedules.home_team_score as home_team_score,
-				season_schedules.away_team_score as away_team_score
+				season_schedules.away_team_score as away_team_score,
+				season_schedules.referee_id as referee_id
 			FROM seasons
 			LEFT JOIN season_schedules ON season_schedules.season_id = seasons.id
 			WHERE seasons.id=$1`
 
 	rows, err := connection.Query(context.Background(), sql, seasonID)
-
 	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close()
 
 	matchesMap := make(map[int][]domain.Match)
 
 	var seasonId, seasonName, leagueId, seasonStatus string
-	var matchID, homeTeamID, awayTeamID *string
+	var version int
+	var matchID, homeTeamID, awayTeamID, refereeID *string
 	var round, homeTeamScore, awayTeamScore *int
 
 	foundRows := false
 
 	for rows.Next() {
-		if err := rows.Scan(&seasonId, &seasonName, &leagueId, &seasonStatus, &matchID, &round, &homeTeamID, &awayTeamID, &homeTeamScore, &awayTeamScore); err != nil {
+		if err := rows.Scan(&seasonId, &seasonName, &leagueId, &seasonStatus, &version, &matchID, &round, &homeTeamID, &awayTeamID, &homeTeamScore, &awayTeamScore, &refereeID); err != nil {
 			return nil, err
 		}
-
 		if matchID != nil {
 			matches, exists := matchesMap[*round]
 			homeId := "bye"
 			awayId := "bye"
-
 			if homeTeamID != nil {
 				homeId = *homeTeamID
 			}
@@ -70,7 +72,9 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 			newMatch, _ := domain.NewMatch(matchID, homeId, awayId)
 			newMatch.AwayTeamScore = *awayTeamScore
 			newMatch.HomeTeamScore = *homeTeamScore
-
+			if refereeID != nil {
+				newMatch.RefereeID = *refereeID
+			}
 			if exists {
 				matchesMap[*round] = append(matches, newMatch)
 			} else {
@@ -97,6 +101,7 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 		LeagueId:       leagueId,
 		Name:           seasonName,
 		Status:         domain.SeasonStatus(seasonStatus),
+		Version:        version,
 		Rounds:         rounds,
 		MatchLocations: nil,
 	}
@@ -105,64 +110,81 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 }
 
 func (sr *SeasonRepository) Save(season *domain.Season) error {
-	connection := database.GetConnection()
+	return database.WithTx(context.Background(), func(tx pgx.Tx) error {
+		if season.Version <= 0 {
+			sql := `INSERT INTO league_management.seasons (id, name, league_id, status, version) VALUES ($1, $2, $3, $4, $5)`
+			_, err := tx.Exec(context.Background(), sql, season.ID, season.Name, season.LeagueId, season.Status, 1)
+			if err != nil {
+				var pgErr *pgconn.PgError
+				if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+					return app_errors.ErrDuplicateResource
+				}
+				return err
+			}
+			season.Version = 1
+		} else {
+			sql := `UPDATE league_management.seasons
+				SET name=$1, league_id=$2, status=$3, version=version+1
+				WHERE id=$4 AND version=$5`
 
-	sql := `INSERT INTO seasons (id, name, league_id, status) VALUES ($1, $2, $3, $4)
-            ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, league_id=EXCLUDED.league_id, status=EXCLUDED.status;`
+			tag, err := tx.Exec(context.Background(), sql, season.Name, season.LeagueId, season.Status, season.ID, season.Version)
+			if err != nil {
+				return err
+			}
+			if tag.RowsAffected() == 0 {
+				return app_errors.ErrConcurrentModification
+			}
+			season.Version++
+		}
 
-	_, err := connection.Exec(context.Background(), sql, season.ID, season.Name, season.LeagueId, season.Status)
-	if err != nil {
-		return err
-	}
+		values := []string{}
+		params := []interface{}{}
+		paramIndex := 1
 
-	values := []string{}
-	params := []interface{}{}
-	paramIndex := 1
+		if len(season.Rounds) > 0 {
+			matchSQL := `INSERT INTO league_management.season_schedules 
+					 (id, season_id, league_id, round, home_team_id, away_team_id, home_team_score, away_team_score, referee_id) 
+					 VALUES %s 
+					 ON CONFLICT (id) DO UPDATE 
+					 SET league_id = EXCLUDED.league_id, 
+						 round = EXCLUDED.round, 
+						 home_team_id = EXCLUDED.home_team_id, 
+						 away_team_id = EXCLUDED.away_team_id, 
+						 home_team_score = EXCLUDED.home_team_score, 
+						 away_team_score = EXCLUDED.away_team_score, 
+						 referee_id = EXCLUDED.referee_id;`
+			for _, round := range season.Rounds {
+				for _, match := range round.Matches {
+					parametrizedValues := fmt.Sprintf(
+						"($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+						paramIndex, paramIndex+1, paramIndex+2, paramIndex+3, paramIndex+4, paramIndex+5, paramIndex+6, paramIndex+7, paramIndex+8,
+					)
+					values = append(values, parametrizedValues)
+					params = append(
+						params,
+						match.ID,
+						season.ID,
+						season.LeagueId,
+						round.RoundNumber,
+						match.GetHomeTeam(),
+						match.GetAwayTeam(),
+						match.HomeTeamScore,
+						match.AwayTeamScore,
+						match.RefereeID,
+					)
+					paramIndex += 9
+				}
+			}
 
-	if len(season.Rounds) > 0 {
-		matchSQL := `INSERT INTO season_schedules 
-                     (id, season_id, league_id, round, home_team_id, away_team_id, home_team_score, away_team_score) 
-                     VALUES %s 
-                     ON CONFLICT (id) DO UPDATE 
-                     SET league_id = EXCLUDED.league_id, 
-                         round = EXCLUDED.round, 
-                         home_team_id = EXCLUDED.home_team_id, 
-                         away_team_id = EXCLUDED.away_team_id, 
-                         home_team_score = EXCLUDED.home_team_score, 
-                         away_team_score = EXCLUDED.away_team_score;`
-
-		for _, round := range season.Rounds {
-			for _, match := range round.Matches {
-
-				parametrizedValues := fmt.Sprintf(
-					"($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
-					paramIndex, paramIndex+1, paramIndex+2, paramIndex+3, paramIndex+4, paramIndex+5, paramIndex+6, paramIndex+7,
-				)
-				values = append(values, parametrizedValues)
-
-				params = append(
-					params,
-					match.ID,
-					season.ID,
-					season.LeagueId,
-					round.RoundNumber,
-					match.GetHomeTeam(),
-					match.GetAwayTeam(),
-					match.HomeTeamScore,
-					match.AwayTeamScore,
-				)
-				paramIndex += 8
+			query := fmt.Sprintf(matchSQL, strings.Join(values, ", "))
+			_, err := tx.Exec(context.Background(), query, params...)
+			if err != nil {
+				return err
 			}
 		}
 
-		query := fmt.Sprintf(matchSQL, strings.Join(values, ", "))
-		_, err = connection.Exec(context.Background(), query, params...)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func (sr *SeasonRepository) Search(orgOwnerID, leagueID string, searchDTO dtos.SearchSeasonDTO) ([]interface{}, int) {

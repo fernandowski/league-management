@@ -22,6 +22,7 @@ type Season struct {
 	LeagueId       string
 	Name           string
 	Status         SeasonStatus
+	Version        int
 	Rounds         []Round
 	MatchLocations []MatchLocation
 }
@@ -35,7 +36,7 @@ func NewSeason(name, leagueID string) (*Season, error) {
 		return nil, errors.New("name cannot be empty")
 	}
 
-	return &Season{ID: uuid.New().String(), Name: name, LeagueId: leagueID, Status: SeasonStatusPending}, nil
+	return &Season{ID: uuid.New().String(), Name: name, LeagueId: leagueID, Status: SeasonStatusPending, Version: 0}, nil
 }
 
 func (s *Season) ScheduleRounds(league League) error {
@@ -115,6 +116,7 @@ func (s *Season) copy() *Season {
 	}
 
 	newSeason.Rounds = newRounds
+	newSeason.Version = s.Version
 
 	return &newSeason
 }

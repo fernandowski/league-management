@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/database"
 	"strings"
@@ -17,30 +18,30 @@ func NewTeamRepository() *TeamRepository {
 }
 
 func (tr *TeamRepository) Save(team *domain.Team) error {
-	connection := database.GetConnection()
+	return database.WithTx(context.Background(), func(tx pgx.Tx) error {
+		sql := "INSERT INTO league_management.teams (name) VALUES ($1) RETURNING id"
 
-	sql := "INSERT INTO league_management.teams (name) VALUES ($1) RETURNING id"
+		var newTeamId string
+		err := tx.QueryRow(context.Background(), sql, string(team.Name)).Scan(&newTeamId)
+		if err != nil {
+			return err
+		}
 
-	var newTeamId string
-	err := connection.QueryRow(context.Background(), sql, string(team.Name)).Scan(&newTeamId)
+		sql = "INSERT INTO league_management.organization_teams (organization_id, team_id) VALUES ($1, $2)"
 
-	if err != nil {
-		panic(err.Error())
-	}
+		_, err = tx.Exec(context.Background(), sql, team.OrganizationId, newTeamId)
+		if err != nil {
+			return err
+		}
 
-	sql = "INSERT INTO league_management.organization_teams (organization_id, team_id) VALUES ($1, $2)"
+		if len(team.Roles) > 0 {
+			if err := upsertTeamOwnersTx(tx, newTeamId, team.Roles); err != nil {
+				return err
+			}
+		}
 
-	_, err = connection.Exec(context.Background(), sql, team.OrganizationId, newTeamId)
-
-	if err != nil {
-		panic(err.Error())
-	}
-
-	if len(team.Roles) > 0 {
-		upsertTeamOwners(newTeamId, team.Roles)
-	}
-
-	return err
+		return nil
+	})
 }
 
 func (tr *TeamRepository) FindById(teamId string) (*domain.Team, error) {
@@ -135,7 +136,7 @@ func (tr *TeamRepository) Search(organizationId, userId, searchTerm string) []in
 	return results
 }
 
-func upsertTeamOwners(teamId string, owners map[string]domain.TeamRole) {
+func upsertTeamOwnersTx(tx pgx.Tx, teamId string, owners map[string]domain.TeamRole) error {
 	var totalValues = len(owners)
 	var values = make([]string, totalValues)
 
@@ -149,11 +150,10 @@ func upsertTeamOwners(teamId string, owners map[string]domain.TeamRole) {
 		strings.Join(values, ",") +
 		"ON CONFLICT (team_id, user_id, role) DO NOTHING"
 
-	connection := database.GetConnection()
-
-	_, err := connection.Exec(context.Background(), sql)
-
+	_, err := tx.Exec(context.Background(), sql)
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
+
+	return nil
 }
