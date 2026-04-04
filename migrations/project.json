@@ -1,0 +1,24 @@
+{
+  "name": "migrations",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "migrations",
+  "projectType": "library",
+  "tags": [
+    "scope:data",
+    "type:infra"
+  ],
+  "targets": {
+    "migrate-up": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "make migrate-up"
+      }
+    },
+    "migrate-down": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "make migrate-down"
+      }
+    }
+  }
+}

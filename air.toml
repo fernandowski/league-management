@@ -4,7 +4,7 @@ tmp_dir = "tmp"
 
 # Configure the build process
 [build]
-cmd = "go build -buildvcs=false -o ./tmp/main . || echo 'Build failed'"
+cmd = "go build -buildvcs=false -o ./tmp/main ./apps/api || echo 'Build failed'"
 bin = "./tmp/main"
 delay = 2000
 kill_delay = 500
@@ -14,4 +14,4 @@ full_bin = "APP_ENV=dev ./tmp/main"
 [log]
 color = true
 time = true
-level = "debug
+level = "debug"

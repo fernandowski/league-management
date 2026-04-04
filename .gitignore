@@ -3,3 +3,11 @@
 .idea
 
 league-management.iml
+node_modules
+dist
+.nx
+apps/mobile/android/.gradle
+apps/mobile/android/build
+apps/mobile/android/app/build
+apps/mobile/ios/Pods
+apps/mobile/ios/build

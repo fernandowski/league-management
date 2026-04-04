@@ -1,0 +1,26 @@
+{
+  "name": "league-management",
+  "private": true,
+  "workspaces": [
+    "apps/mobile"
+  ],
+  "scripts": {
+    "nx": "nx",
+    "build": "nx build api",
+    "serve": "nx serve api",
+    "dev": "nx run api:dev",
+    "test": "nx test api",
+    "mobile:start": "nx run mobile:start",
+    "mobile:web": "nx run mobile:web",
+    "mobile:web:build": "nx run mobile:build-web",
+    "mobile:test": "nx run mobile:test",
+    "mobile:lint": "nx run mobile:lint",
+    "mobile:android": "nx run mobile:android",
+    "mobile:ios": "nx run mobile:ios",
+    "migrate:up": "nx run migrations:migrate-up",
+    "migrate:down": "nx run migrations:migrate-down"
+  },
+  "devDependencies": {
+    "nx": "^21.6.4"
+  }
+}

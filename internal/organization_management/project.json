@@ -1,0 +1,14 @@
+{
+  "name": "organization-management",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "internal/organization_management",
+  "projectType": "library",
+  "tags": [
+    "scope:organization-management",
+    "type:lib"
+  ],
+  "implicitDependencies": [
+    "shared",
+    "user-management"
+  ]
+}
