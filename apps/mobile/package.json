@@ -1,5 +1,5 @@
 {
-  "name": "league-management-fe",
+  "name": "web",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -57,5 +57,54 @@
     "react-test-renderer": "18.2.0",
     "typescript": "~5.3.3"
   },
-  "private": true
+  "private": true,
+  "nx": {
+    "sourceRoot": "apps/mobile",
+    "projectType": "application",
+    "tags": [
+      "scope:web",
+      "type:app"
+    ],
+    "includedScripts": [],
+    "targets": {
+      "serve": {
+        "executor": "nx:run-commands",
+        "options": {
+          "cwd": "apps/mobile",
+          "command": "npx expo start --web -c"
+        }
+      },
+      "start": {
+        "executor": "nx:run-commands",
+        "options": {
+          "cwd": "apps/mobile",
+          "command": "npx expo start"
+        }
+      },
+      "build": {
+        "executor": "nx:run-commands",
+        "options": {
+          "cwd": "apps/mobile",
+          "command": "npx expo export --platform web --output-dir ../../dist/apps/web"
+        },
+        "outputs": [
+          "{workspaceRoot}/dist/apps/web"
+        ]
+      },
+      "test": {
+        "executor": "nx:run-commands",
+        "options": {
+          "cwd": "apps/mobile",
+          "command": "npx jest --runInBand --config jest.config.js"
+        }
+      },
+      "lint": {
+        "executor": "nx:run-commands",
+        "options": {
+          "cwd": "apps/mobile",
+          "command": "npx expo lint"
+        }
+      }
+    }
+  }
 }

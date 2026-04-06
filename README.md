@@ -3,7 +3,7 @@
 Nx monorepo with:
 
 - `apps/api`: Go backend
-- `apps/mobile`: Expo app used for browser development and mobile targets
+- `apps/mobile`: frontend app, exposed in Nx as the `web` project
 
 ## Local Development
 
@@ -41,7 +41,7 @@ This command now starts the backend inside the Docker Compose `app` container.
 ### 5. Start the frontend for browser development
 
 ```bash
-NX_DAEMON=false npx nx run mobile:web
+NX_DAEMON=false npx nx serve web
 ```
 
 Frontend runs on `http://localhost:8081`.
@@ -50,12 +50,12 @@ Frontend runs on `http://localhost:8081`.
 
 ```bash
 NX_DAEMON=false npx nx test api
-NX_DAEMON=false npx nx test mobile
-NX_DAEMON=false npx nx lint mobile
-NX_DAEMON=false npx nx run mobile:build-web
+NX_DAEMON=false npx nx test web
+NX_DAEMON=false npx nx run web:lint
+NX_DAEMON=false npx nx build web
 ```
 
 ## Notes
 
 - Use `NX_DAEMON=false` if Nx daemon issues appear locally.
-- `apps/mobile` is an Expo Router app. For browser work, use the `mobile:web` target.
+- `apps/mobile` is an Expo Router app. In Nx it is now managed as the `web` project.

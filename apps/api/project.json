@@ -7,12 +7,6 @@
     "scope:api",
     "type:app"
   ],
-  "implicitDependencies": [
-    "organization-management",
-    "user-management",
-    "shared",
-    "migrations"
-  ],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
@@ -35,7 +29,19 @@
     "migrate": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "npx nx run migrations:migrate-up"
+        "command": "docker compose run --rm --build migrate"
+      }
+    },
+    "migrate-up": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose run --rm --build migrate"
+      }
+    },
+    "migrate-down": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose run --rm --build migrate down"
       }
     },
     "test": {
