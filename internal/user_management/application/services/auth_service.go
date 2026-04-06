@@ -1,9 +1,9 @@
-package service
+package services
 
 import (
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
-	domain "league-management/internal/user_management/domain/user"
+	domain "league-management/internal/user_management/domain"
 	"time"
 )
 

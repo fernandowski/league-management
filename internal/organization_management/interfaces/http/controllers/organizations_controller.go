@@ -4,15 +4,15 @@ import (
 	"github.com/kataras/iris/v12"
 	"league-management/internal/organization_management/application/services"
 	"league-management/internal/organization_management/domain"
-	domain2 "league-management/internal/user_management/domain/user"
+	domain2 "league-management/internal/user_management/domain"
 )
 
-var organizationService = services.NewOrganizationService()
+type OrganizationsController struct {
+	organizationService *services.OrganizationService
+}
 
-type OrganizationsController struct{}
-
-func NewOrganizationController() OrganizationsController {
-	return OrganizationsController{}
+func NewOrganizationController(organizationService *services.OrganizationService) *OrganizationsController {
+	return &OrganizationsController{organizationService: organizationService}
 }
 
 type organizationRequestDto struct {
@@ -52,7 +52,7 @@ func (oc *OrganizationsController) FetchOrganizations(ctx iris.Context) {
 		return
 	}
 
-	organizations, err := organizationService.FetchOrganizations(authenticatedUser.Id)
+	organizations, err := oc.organizationService.FetchOrganizations(authenticatedUser.Id)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
 		ctx.JSON(iris.Map{"error": err.Error()})
@@ -82,7 +82,7 @@ func (oc *OrganizationsController) AddOrganization(ctx iris.Context) {
 		return
 	}
 
-	err = organizationService.OpenNewOrganization(authenticatedUser.Id, createOrganizationRequestDto.Name)
+	err = oc.organizationService.OpenNewOrganization(authenticatedUser.Id, createOrganizationRequestDto.Name)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
 		ctx.JSON(iris.Map{"error": err.Error()})

@@ -1,11 +1,13 @@
 package main
 
 import (
-	routes "league-management/internal/user_management/interfaces/http"
+	apphttp "league-management/internal/app/http"
 	"log"
 )
 
 func main() {
 	log.Print("initialized")
-	routes.Initialize()
+	if err := apphttp.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

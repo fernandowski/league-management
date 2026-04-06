@@ -5,12 +5,12 @@ import (
 	"league-management/internal/organization_management/application/services"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/dtos"
-	domain2 "league-management/internal/user_management/domain/user"
+	domain2 "league-management/internal/user_management/domain"
 )
 
-var leagueService = services.NewLeagueService()
-
-type LeaguesController struct{}
+type LeaguesController struct {
+	leagueService *services.LeagueService
+}
 
 type leagueCreateDTO struct {
 	Name           string `json:"name"`
@@ -47,8 +47,8 @@ func leaguesToRequestResponse(leagues []domain.League) []leagueResponseDto {
 	return dto
 }
 
-func NewLeaguesController() *LeaguesController {
-	return &LeaguesController{}
+func NewLeaguesController(leagueService *services.LeagueService) *LeaguesController {
+	return &LeaguesController{leagueService: leagueService}
 }
 func (lc *LeaguesController) CreateLeague(ctx iris.Context) {
 	var body leagueCreateDTO
@@ -70,7 +70,7 @@ func (lc *LeaguesController) CreateLeague(ctx iris.Context) {
 		return
 	}
 
-	err = leagueService.Provision(authenticatedUser.Id, body.OrganizationId, body.Name)
+	err = lc.leagueService.Provision(authenticatedUser.Id, body.OrganizationId, body.Name)
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
@@ -105,7 +105,7 @@ func (lc *LeaguesController) StartLeagueMembership(ctx iris.Context) {
 		return
 	}
 
-	err = leagueService.InitiateTeamMembership(authenticatedUser.Id, teamId.(string), body.TeamId)
+	err = lc.leagueService.InitiateTeamMembership(authenticatedUser.Id, teamId.(string), body.TeamId)
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
@@ -139,7 +139,7 @@ func (lc *LeaguesController) RevokeLeagueMembership(ctx iris.Context) {
 		return
 	}
 
-	err := leagueService.RevokeTeamMembership(authenticatedUser.Id, leagueId.(string), membershipId.(string))
+	err := lc.leagueService.RevokeTeamMembership(authenticatedUser.Id, leagueId.(string), membershipId.(string))
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
@@ -190,7 +190,7 @@ func (lc *LeaguesController) FetchLeagues(ctx iris.Context) {
 		},
 	}
 
-	leagues, err := leagueService.Search(authenticatedUser.Id, searchDTO)
+	leagues, err := lc.leagueService.Search(authenticatedUser.Id, searchDTO)
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
@@ -218,7 +218,7 @@ func (lc *LeaguesController) FetchLeaguesMembers(ctx iris.Context) {
 		return
 	}
 
-	result, err := leagueService.FetchLeagueMembers(leagueId.(string), authenticatedUser.Id)
+	result, err := lc.leagueService.FetchLeagueMembers(leagueId.(string), authenticatedUser.Id)
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
@@ -246,7 +246,7 @@ func (lc *LeaguesController) FetchLeagueDetails(ctx iris.Context) {
 		return
 	}
 
-	league, err := leagueService.Details(authenticatedUser.Id, leagueId)
+	league, err := lc.leagueService.Details(authenticatedUser.Id, leagueId)
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)

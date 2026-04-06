@@ -1,25 +1,36 @@
-package service
+package services
 
 import (
 	"errors"
 	"github.com/google/uuid"
-	"league-management/internal/user_management/domain/user"
+	"league-management/internal/user_management/domain"
 	"league-management/internal/user_management/infrastructure/crypto"
-	"league-management/internal/user_management/infrastructure/repositories/postgres"
 )
 
 type UserService struct {
+	userRepository userRepository
+	authService    authService
 }
 
-func NewUserService() *UserService {
-	return &UserService{}
+type userRepository interface {
+	Save(*domain.User) error
+	FindByEmail(string) *domain.User
 }
 
-var userRepository = pg.NewUserRepository()
+type authService interface {
+	GenerateJWT(*domain.User) (string, error)
+}
+
+func NewUserService(userRepository userRepository, authService authService) *UserService {
+	return &UserService{
+		userRepository: userRepository,
+		authService:    authService,
+	}
+}
 
 func (us *UserService) RegisterUser(email string, password string) (*domain.User, error) {
 
-	var user = userRepository.FindByEmail(email)
+	var user = us.userRepository.FindByEmail(email)
 
 	if user != nil {
 		return nil, errors.New("email is taken")
@@ -41,7 +52,7 @@ func (us *UserService) RegisterUser(email string, password string) (*domain.User
 
 	newUser.PasswordHash = hash
 
-	err := userRepository.Save(newUser)
+	err := us.userRepository.Save(newUser)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +61,7 @@ func (us *UserService) RegisterUser(email string, password string) (*domain.User
 }
 
 func (us *UserService) Login(email string, password string) (string, error) {
-	var existingUser = userRepository.FindByEmail(email)
+	var existingUser = us.userRepository.FindByEmail(email)
 
 	if existingUser == nil {
 		return "", errors.New("invalid user name or password")
@@ -60,8 +71,7 @@ func (us *UserService) Login(email string, password string) (string, error) {
 		return "", errors.New("invalid user name or password")
 	}
 
-	service := NewAuthService()
-	signedToken, err := service.GenerateJWT(existingUser)
+	signedToken, err := us.authService.GenerateJWT(existingUser)
 
 	if err != nil {
 		return "", err

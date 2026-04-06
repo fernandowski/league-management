@@ -4,16 +4,15 @@ import (
 	"github.com/kataras/iris/v12"
 	"league-management/internal/organization_management/application/services"
 	"league-management/internal/shared/dtos"
-	domain2 "league-management/internal/user_management/domain/user"
+	domain2 "league-management/internal/user_management/domain"
 )
 
 type SeasonController struct {
+	seasonService *services.SeasonService
 }
 
-var seasonService = services.NewSeasonService()
-
-func NewSeasonController() *SeasonController {
-	return &SeasonController{}
+func NewSeasonController(seasonService *services.SeasonService) *SeasonController {
+	return &SeasonController{seasonService: seasonService}
 }
 
 func (sc *SeasonController) AddNewSeasonToLeague(ctx iris.Context) {
@@ -42,7 +41,7 @@ func (sc *SeasonController) AddNewSeasonToLeague(ctx iris.Context) {
 		return
 	}
 
-	err := seasonService.AddNewSeason(authenticatedUser.Id, leagueId.(string), requestBody.Name)
+	err := sc.seasonService.AddNewSeason(authenticatedUser.Id, leagueId.(string), requestBody.Name)
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
@@ -92,7 +91,7 @@ func (sc *SeasonController) Search(ctx iris.Context) {
 		},
 	}
 
-	var results = seasonService.Search(authenticatedUser.Id, leagueId, searchDTO)
+	var results = sc.seasonService.Search(authenticatedUser.Id, leagueId, searchDTO)
 
 	ctx.JSON(results)
 }
@@ -115,7 +114,7 @@ func (sc *SeasonController) Schedule(ctx iris.Context) {
 		return
 	}
 
-	var err = seasonService.PlanSchedule(authenticatedUser.Id, seasonId)
+	var err = sc.seasonService.PlanSchedule(authenticatedUser.Id, seasonId)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
 		ctx.JSON(iris.Map{"error": err.Error()})
@@ -151,7 +150,7 @@ func (sc *SeasonController) ChangeMatchScore(ctx iris.Context) {
 		return
 	}
 
-	err = seasonService.ChangeMatchUpScore(authenticatedUser.Id, seasonId, body)
+	err = sc.seasonService.ChangeMatchUpScore(authenticatedUser.Id, seasonId, body)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
 		ctx.JSON(iris.Map{"error": err.Error()})
@@ -180,7 +179,7 @@ func (sc *SeasonController) StartSeason(ctx iris.Context) {
 		return
 	}
 
-	var err = seasonService.StartSeason(authenticatedUser.Id, seasonId)
+	var err = sc.seasonService.StartSeason(authenticatedUser.Id, seasonId)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
 		ctx.JSON(iris.Map{"error": err.Error()})
@@ -208,7 +207,7 @@ func (sc *SeasonController) SeasonDetails(ctx iris.Context) {
 		return
 	}
 
-	result, err := seasonService.SeasonDetails(authenticatedUser.Id, seasonId)
+	result, err := sc.seasonService.SeasonDetails(authenticatedUser.Id, seasonId)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
 		ctx.JSON(iris.Map{"error": err.Error()})
@@ -236,7 +235,7 @@ func (sc *SeasonController) SeasonStandings(ctx iris.Context) {
 		return
 	}
 
-	result, err := seasonService.SeasonStandings(authenticatedUser.Id, seasonId)
+	result, err := sc.seasonService.SeasonStandings(authenticatedUser.Id, seasonId)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
 		ctx.JSON(iris.Map{"error": err.Error()})
@@ -263,7 +262,7 @@ func (sc *SeasonController) FetchMatches(ctx iris.Context) {
 		return
 	}
 
-	result, err := seasonService.SeasonMatchUps(authenticatedUser.Id, seasonId)
+	result, err := sc.seasonService.SeasonMatchUps(authenticatedUser.Id, seasonId)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
 		ctx.JSON(iris.Map{"error": err.Error()})

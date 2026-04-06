@@ -5,7 +5,7 @@ import (
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/dtos"
-	user_domain "league-management/internal/user_management/domain/user"
+	user_domain "league-management/internal/user_management/domain"
 	"sync"
 	"testing"
 )

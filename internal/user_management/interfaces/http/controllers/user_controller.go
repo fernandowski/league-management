@@ -2,12 +2,12 @@ package controllers
 
 import (
 	"github.com/kataras/iris/v12"
-	"league-management/internal/user_management/application/service"
-	"league-management/internal/user_management/infrastructure/dto"
+	"league-management/internal/user_management/application/services"
+	"league-management/internal/user_management/infrastructure/dtos"
 )
 
 type UserController struct {
-	userService *service.UserService
+	userService *services.UserService
 }
 
 type userRegistrationDto struct {
@@ -20,8 +20,8 @@ type userLoginRequestDto struct {
 	Password string `json:"password"`
 }
 
-func NewUserController(us *service.UserService) UserController {
-	return UserController{userService: us}
+func NewUserController(us *services.UserService) *UserController {
+	return &UserController{userService: us}
 }
 
 func (uc *UserController) Register(ctx iris.Context) {
@@ -36,7 +36,7 @@ func (uc *UserController) Register(ctx iris.Context) {
 		return
 	}
 
-	userDto := dto.FromDomain(createdUser)
+	userDto := dtos.FromDomain(createdUser)
 	ctx.JSON(userDto)
 }
 

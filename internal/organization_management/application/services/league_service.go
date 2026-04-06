@@ -4,9 +4,8 @@ import (
 	"errors"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/organization_management/domain/domainservices"
-	"league-management/internal/organization_management/infrastructure/repositories"
 	"league-management/internal/shared/dtos"
-	user_domain "league-management/internal/user_management/domain/user"
+	user_domain "league-management/internal/user_management/domain"
 )
 
 type leagueStore interface {
@@ -37,9 +36,14 @@ type LeagueService struct {
 	userRepo         userFinder
 }
 
-func NewLeagueService() *LeagueService {
+func NewLeagueService(
+	leagueRepository leagueStore,
+	organizationRepo organizationFinder,
+	teamRepository teamFinder,
+	userRepo userFinder,
+) *LeagueService {
 	return &LeagueService{
-		leagueRepository: repositories.NewLeagueRepository(),
+		leagueRepository: leagueRepository,
 		organizationRepo: organizationRepo,
 		teamRepository:   teamRepository,
 		userRepo:         userRepo,

@@ -3,18 +3,30 @@ package services
 import (
 	"errors"
 	"league-management/internal/organization_management/domain"
-	"league-management/internal/organization_management/infrastructure/repositories"
-	pg "league-management/internal/user_management/infrastructure/repositories/postgres"
+	userdomain "league-management/internal/user_management/domain"
 )
 
 type OrganizationService struct {
+	organizationRepo organizationRepository
+	userRepo         organizationUserFinder
 }
 
-var organizationRepo = repositories.NewOrganizationRepository()
-var userRepo = pg.NewUserRepository()
+type organizationRepository interface {
+	FindByName(string, string) (*domain.Organization, error)
+	FindById(string) (*domain.Organization, error)
+	Save(*domain.Organization) error
+	FetchAll(string) ([]domain.Organization, error)
+}
 
-func NewOrganizationService() *OrganizationService {
-	return &OrganizationService{}
+type organizationUserFinder interface {
+	FindById(string) (*userdomain.User, error)
+}
+
+func NewOrganizationService(organizationRepo organizationRepository, userRepo organizationUserFinder) *OrganizationService {
+	return &OrganizationService{
+		organizationRepo: organizationRepo,
+		userRepo:         userRepo,
+	}
 }
 
 func (os *OrganizationService) FetchOrganizations(ownerId string) ([]domain.Organization, error) {
@@ -23,13 +35,13 @@ func (os *OrganizationService) FetchOrganizations(ownerId string) ([]domain.Orga
 	// we are using the repo from another bounded context
 	// in case we attempt to migrate to microservices having adapters
 	// will make the migration easier for now it is okay.
-	user, _ := userRepo.FindById(ownerId)
+	user, _ := os.userRepo.FindById(ownerId)
 
 	if user == nil {
 		return nil, errors.New("user does not exist")
 	}
 
-	organizations, err := organizationRepo.FetchAll(ownerId)
+	organizations, err := os.organizationRepo.FetchAll(ownerId)
 
 	if err != nil {
 		return nil, err
@@ -40,7 +52,7 @@ func (os *OrganizationService) FetchOrganizations(ownerId string) ([]domain.Orga
 
 func (os *OrganizationService) OpenNewOrganization(organizationOwner string, orgName string) error {
 
-	existingOrganization, _ := organizationRepo.FindByName(orgName, organizationOwner)
+	existingOrganization, _ := os.organizationRepo.FindByName(orgName, organizationOwner)
 
 	if existingOrganization != nil {
 		return errors.New("organization already exists with name")
@@ -48,7 +60,7 @@ func (os *OrganizationService) OpenNewOrganization(organizationOwner string, org
 
 	organization := domain.NewOrganization(nil, orgName, organizationOwner, true)
 
-	err := organizationRepo.Save(&organization)
+	err := os.organizationRepo.Save(&organization)
 	if err != nil {
 		return err
 	}

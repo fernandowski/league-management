@@ -4,17 +4,16 @@ import (
 	"github.com/kataras/iris/v12"
 	"league-management/internal/organization_management/application/services"
 	"league-management/internal/organization_management/domain"
-	domain2 "league-management/internal/user_management/domain/user"
+	domain2 "league-management/internal/user_management/domain"
 )
 
 type TeamsController struct {
+	teamService *services.TeamService
 }
 
-func NewTeamsController() *TeamsController {
-	return &TeamsController{}
+func NewTeamsController(teamService *services.TeamService) *TeamsController {
+	return &TeamsController{teamService: teamService}
 }
-
-var teamService = services.NewTeamService()
 
 type createTeamDto struct {
 	Name           string `json:"name"`
@@ -39,7 +38,7 @@ func (tc *TeamsController) MakeTeam(ctx iris.Context) {
 		return
 	}
 
-	err := teamService.Make(domain.TeamName(createDto.Name), authenticatedUser.Id, createDto.OrganizationId)
+	err := tc.teamService.Make(domain.TeamName(createDto.Name), authenticatedUser.Id, createDto.OrganizationId)
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
@@ -69,7 +68,7 @@ func (tc *TeamsController) FetchAll(ctx iris.Context) {
 		return
 	}
 
-	results := teamService.Search(organizationId, authenticatedUser.Id, searchTerm)
+	results := tc.teamService.Search(organizationId, authenticatedUser.Id, searchTerm)
 
 	ctx.JSON(results)
 }

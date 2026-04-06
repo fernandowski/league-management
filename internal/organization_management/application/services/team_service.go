@@ -3,26 +3,41 @@ package services
 import (
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/organization_management/domain/domainservices"
-	"league-management/internal/organization_management/infrastructure/repositories"
+	userdomain "league-management/internal/user_management/domain"
 )
 
 type TeamService struct {
+	teamRepository   teamStore
+	organizationRepo organizationFinder
+	userRepo         teamUserFinder
 }
 
-func NewTeamService() *TeamService {
-	return &TeamService{}
+type teamStore interface {
+	Save(*domain.Team) error
+	Search(string, string, string) []interface{}
+	FindById(string) (*domain.Team, error)
 }
 
-var teamRepository = repositories.NewTeamRepository()
+type teamUserFinder interface {
+	FindById(string) (*userdomain.User, error)
+}
+
+func NewTeamService(teamRepository teamStore, organizationRepo organizationFinder, userRepo teamUserFinder) *TeamService {
+	return &TeamService{
+		teamRepository:   teamRepository,
+		organizationRepo: organizationRepo,
+		userRepo:         userRepo,
+	}
+}
 
 func (ts *TeamService) Make(teamName domain.TeamName, userId string, organizationId string) error {
-	user, err := userRepo.FindById(userId)
+	user, err := ts.userRepo.FindById(userId)
 
 	if err != nil {
 		return err
 	}
 
-	organization, err := organizationRepo.FindById(organizationId)
+	organization, err := ts.organizationRepo.FindById(organizationId)
 
 	if err != nil {
 		return err
@@ -34,7 +49,7 @@ func (ts *TeamService) Make(teamName domain.TeamName, userId string, organizatio
 		return err
 	}
 
-	err = teamRepository.Save(newTeam)
+	err = ts.teamRepository.Save(newTeam)
 
 	if err != nil {
 		return err
@@ -45,7 +60,7 @@ func (ts *TeamService) Make(teamName domain.TeamName, userId string, organizatio
 
 func (ts *TeamService) Search(organizationId, userId, searchTerm string) []interface{} {
 
-	result := teamRepository.Search(organizationId, userId, searchTerm)
+	result := ts.teamRepository.Search(organizationId, userId, searchTerm)
 
 	return result
 }

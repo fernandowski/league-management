@@ -4,7 +4,6 @@ import (
 	"errors"
 	"league-management/internal/organization_management/domain"
 	"league-management/internal/organization_management/domain/domainservices"
-	"league-management/internal/organization_management/infrastructure/repositories"
 	"league-management/internal/shared/dtos"
 )
 
@@ -14,10 +13,14 @@ type SeasonService struct {
 	organizationRepo seasonOrganizationRepository
 }
 
-func NewSeasonService() *SeasonService {
+func NewSeasonService(
+	seasonRepository seasonRepository,
+	leagueRepository seasonLeagueRepository,
+	organizationRepo seasonOrganizationRepository,
+) *SeasonService {
 	return &SeasonService{
-		seasonRepository: repositories.NewSeasonRepository(),
-		leagueRepository: repositories.NewLeagueRepository(),
+		seasonRepository: seasonRepository,
+		leagueRepository: leagueRepository,
 		organizationRepo: organizationRepo,
 	}
 }

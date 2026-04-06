@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/database"
-	"league-management/internal/user_management/domain/user"
+	"league-management/internal/user_management/domain"
 )
 
 type UserRepository struct{}
