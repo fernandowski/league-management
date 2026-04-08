@@ -1,6 +1,7 @@
-import { Picker } from '@react-native-picker/picker';
-import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Menu } from 'react-native-paper';
 
 import { AppText } from '@/components/ui/AppText';
 import { useAppTheme } from '@/theme/theme';
@@ -15,6 +16,7 @@ interface AppSelectProps {
   value?: string | null;
   label?: string;
   placeholder?: string;
+  maxWidth?: number;
   onValueChange: (value: string) => void;
 }
 
@@ -23,14 +25,19 @@ export function AppSelect({
   value,
   label,
   placeholder,
+  maxWidth = 320,
   onValueChange,
 }: AppSelectProps) {
-  const [selectedValue, setSelectedValue] = useState(value ?? '');
+  const [visible, setVisible] = useState(false);
   const theme = useAppTheme();
 
-  useEffect(() => {
-    setSelectedValue(value ?? '');
-  }, [value]);
+  const selectedLabel = useMemo(() => {
+    return options.find((option) => option.value === value)?.label ?? placeholder ?? 'Select an option';
+  }, [options, placeholder, value]);
+
+  const closeMenu = () => {
+    setVisible(false);
+  };
 
   return (
     <View style={styles.container}>
@@ -39,29 +46,62 @@ export function AppSelect({
           {label}
         </AppText>
       ) : null}
-      <View
-        style={[
-          styles.shell,
+      <Menu
+        visible={visible}
+        onDismiss={closeMenu}
+        anchorPosition="bottom"
+        contentStyle={[
+          styles.menuContent,
           {
-            backgroundColor: theme.colors.surfaceVariant,
+            backgroundColor: theme.colors.surface,
             borderColor: theme.colors.outline,
           },
         ]}
+        anchor={
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setVisible((currentValue) => !currentValue)}
+            style={({ pressed }) => [
+              styles.shell,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: visible ? theme.colors.primary : theme.colors.outline,
+                shadowColor: theme.colors.shadow,
+                maxWidth,
+              },
+              pressed && { backgroundColor: theme.colors.surfaceVariant },
+            ]}
+          >
+            <AppText numberOfLines={1} style={[styles.value, { color: theme.colors.onSurface }]}>
+              {selectedLabel}
+            </AppText>
+            <View style={[styles.chevronWrap, { backgroundColor: theme.colors.primaryContainer }]}>
+              <Ionicons name={visible ? 'chevron-up' : 'chevron-down'} size={18} color={theme.colors.primary} />
+            </View>
+          </Pressable>
+        }
       >
-        <Picker
-          style={[styles.picker, { color: theme.colors.onSurface }]}
-          selectedValue={selectedValue}
-          onValueChange={(nextValue: string) => {
-            setSelectedValue(nextValue);
-            onValueChange(nextValue);
-          }}
-        >
-          {placeholder ? <Picker.Item label={placeholder} value="" /> : null}
-          {options.map((item) => (
-            <Picker.Item label={item.label} value={item.value} key={item.value} />
-          ))}
-        </Picker>
-      </View>
+        {placeholder ? (
+          <Menu.Item
+            title={placeholder}
+            onPress={() => {
+              onValueChange('');
+              closeMenu();
+            }}
+          />
+        ) : null}
+        {options.map((option) => (
+          <Menu.Item
+            key={option.value}
+            title={option.label}
+            onPress={() => {
+              onValueChange(option.value);
+              closeMenu();
+            }}
+            trailingIcon={option.value === value ? 'check' : undefined}
+          />
+        ))}
+      </Menu>
     </View>
   );
 }
@@ -71,12 +111,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   shell: {
-    maxWidth: 280,
     borderWidth: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
+    borderRadius: 18,
+    minHeight: 56,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingLeft: 16,
+    paddingRight: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 3,
   },
-  picker: {
-    maxWidth: 280,
+  value: {
+    flex: 1,
+    paddingRight: 12,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  chevronWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuContent: {
+    borderWidth: 1,
+    borderRadius: 18,
+    minWidth: 220,
   },
 });
