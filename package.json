@@ -6,17 +6,13 @@
   ],
   "scripts": {
     "nx": "nx",
-    "build": "nx build api",
-    "serve": "nx serve api",
-    "dev": "nx run api:dev",
-    "test": "nx test api",
-    "web:start": "nx run web:start",
-    "web:serve": "nx serve web",
-    "web:build": "nx build web",
-    "web:test": "nx test web",
-    "web:lint": "nx run web:lint",
-    "migrate:up": "nx run api:migrate-up",
-    "migrate:down": "nx run api:migrate-down"
+    "api:build": "nx build api",
+    "api:serve": "nx serve api",
+    "api:dev": "nx run api:dev",
+    "api:test": "nx test api",
+    "api:migrate": "nx run api:migrate",
+    "api:migrate:up": "nx run api:migrate-up",
+    "api:migrate:down": "nx run api:migrate-down"
   },
   "devDependencies": {
     "nx": "^21.6.4"

@@ -22,12 +22,14 @@ docker compose up -d db
 ### 3. Run database migrations
 
 ```bash
-npm run migrate:up
+npm run api:migrate:up
 NX_DAEMON=false npx nx run api:migrate
 ```
 
 These commands run migrations in Docker via `docker compose run migrate`.
 `nx serve api` and `nx run api:dev` start the API container, but they do not run migrations automatically.
+
+The Go backend now lives fully under `apps/api`, including `go.mod`, `internal/`, `migrations/`, Docker/Compose files, and Air config.
 
 ### 4. Start the backend
 

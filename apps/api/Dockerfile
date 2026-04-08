@@ -2,13 +2,16 @@ FROM golang:1.25 AS builder
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
+COPY apps/api/go.mod apps/api/go.sum ./apps/api/
 
+WORKDIR /app/apps/api
 RUN go mod download
 
+WORKDIR /app
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/myapp ./apps/api
+WORKDIR /app/apps/api
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/myapp .
 
 
 # Development
@@ -17,8 +20,10 @@ WORKDIR /workspace
 RUN adduser --disabled-password --gecos '' appuser
 RUN go install github.com/air-verse/air@latest
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
-COPY go.mod go.sum ./
+COPY apps/api/go.mod apps/api/go.sum ./apps/api/
+WORKDIR /workspace/apps/api
 RUN go mod download
+WORKDIR /workspace
 COPY . .
 WORKDIR /workspace/apps/api
 USER appuser

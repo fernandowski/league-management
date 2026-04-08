@@ -11,43 +11,43 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "go build -buildvcs=false -o dist/apps/api/league-management ./apps/api"
+        "command": "go -C apps/api build -buildvcs=false -o ../../dist/apps/api/league-management ."
       }
     },
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "docker compose up --build app"
+        "command": "docker compose -f apps/api/docker-compose.yml up app"
       }
     },
     "dev": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "docker compose up --build app"
+        "command": "docker compose -f apps/api/docker-compose.yml up app"
       }
     },
     "migrate": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "docker compose run --rm --build migrate"
+        "command": "docker compose -f apps/api/docker-compose.yml run --rm migrate"
       }
     },
     "migrate-up": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "docker compose run --rm --build migrate"
+        "command": "docker compose -f apps/api/docker-compose.yml run --rm migrate"
       }
     },
     "migrate-down": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "docker compose run --rm --build migrate down"
+        "command": "docker compose -f apps/api/docker-compose.yml run --rm migrate down"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "go test -v ./..."
+        "command": "go -C apps/api test -v ./..."
       }
     }
   }

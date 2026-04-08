@@ -10,12 +10,11 @@
       "!{projectRoot}/**/*_test.go"
     ],
     "sharedGlobals": [
-      "{workspaceRoot}/go.mod",
-      "{workspaceRoot}/go.sum",
-      "{workspaceRoot}/Makefile",
-      "{workspaceRoot}/air.toml",
-      "{workspaceRoot}/Dockerfile",
-      "{workspaceRoot}/docker-compose.yml"
+      "{workspaceRoot}/apps/api/go.mod",
+      "{workspaceRoot}/apps/api/go.sum",
+      "{workspaceRoot}/apps/api/air.toml",
+      "{workspaceRoot}/apps/api/Dockerfile",
+      "{workspaceRoot}/apps/api/docker-compose.yml"
     ]
   },
   "targetDefaults": {
@@ -45,6 +44,6 @@
   },
   "workspaceLayout": {
     "appsDir": "apps",
-    "libsDir": "internal"
+    "libsDir": "libs"
   }
 }

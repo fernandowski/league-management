@@ -1,15 +1,18 @@
-# Set the root directory to watch
-root = "apps/api"
+# Watch the backend app from its own directory.
+root = "."
 tmp_dir = "tmp"
 
-# Configure the build process
 [build]
 cmd = "go build -buildvcs=false -o ./tmp/main . || echo 'Build failed'"
 bin = "./tmp/main"
 delay = 2000
 kill_delay = 500
+poll = true
+poll_interval = 500
 log = "air.log"
 full_bin = "APP_ENV=dev ./tmp/main"
+include_dir = ["internal", "migrations"]
+exclude_dir = ["tmp"]
 
 [log]
 color = true
