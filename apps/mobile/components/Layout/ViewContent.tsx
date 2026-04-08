@@ -1,43 +1,50 @@
-import React from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
-import { Header } from "@/components/Header/Header";
+import React from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+
+import { Header } from '@/components/Header/Header';
+import { useAppTheme } from '@/theme/theme';
 
 interface ViewContentProps {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }
 
-const ViewContent = (props: ViewContentProps) => {
-    return (
-        <View style={styles.outerContainer}>
-            <View>
-                <Header />
-            </View>
+const ViewContent = ({ children }: ViewContentProps) => {
+  const theme = useAppTheme();
 
-            <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
-                {props.children}
-            </ScrollView>
-        </View>
-    );
+  return (
+    <View style={[styles.outerContainer, { backgroundColor: theme.colors.background }]}>
+      <View style={styles.headerWrap}>
+        <Header />
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {children}
+      </ScrollView>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    outerContainer: {
-        flex: 1,
-        backgroundColor: "#f8f9fa",
-    },
-    scrollView: {
-        flex: 1,
-        width: "100%",
-        marginTop: 32,
-    },
-    scrollContent: {
-        paddingHorizontal: 32,
-        paddingVertical: 16,
-    },
+  outerContainer: {
+    flex: 1,
+  },
+  headerWrap: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
 });
 
 export default ViewContent;
