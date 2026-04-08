@@ -1,51 +1,36 @@
-import {Portal, Modal, Button} from "react-native-paper";
-import {View, StyleSheet, DimensionValue} from "react-native";
+import { PropsWithChildren } from 'react';
+import { DimensionValue, StyleProp, ViewStyle } from 'react-native';
 
-interface ModalProps {
-    isOpen: boolean;
-    children: React.ReactNode;
-    width?: DimensionValue;
-    height?: DimensionValue
+import { AppModal } from '@/components/ui/AppModal';
+
+interface ModalProps extends PropsWithChildren {
+  isOpen: boolean;
+  onDismiss?: () => void;
+  dismissable?: boolean;
+  width?: DimensionValue;
+  height?: DimensionValue;
+  contentContainerStyle?: StyleProp<ViewStyle>;
 }
 
-export default function StyledModal(props: ModalProps) {
-    return (
-        <Portal>
-            <Modal
-                visible={props.isOpen}
-                dismissable={false}
-                contentContainerStyle={[
-                    styles.modal,
-                    props.width ? {width: props.width} : styles.defaultWidth,
-                    props.height ? {height: props.height} : styles.defaultHeight,
-                ]}>
-                <View style={styles.modalMainContent}>
-                    {props.children}
-                </View>
-            </Modal>
-        </Portal>
-    );
+export default function StyledModal({
+  isOpen,
+  onDismiss,
+  dismissable,
+  width,
+  height,
+  contentContainerStyle,
+  children,
+}: ModalProps) {
+  return (
+    <AppModal
+      visible={isOpen}
+      onDismiss={onDismiss}
+      dismissable={dismissable}
+      width={width}
+      height={height}
+      contentContainerStyle={contentContainerStyle}
+    >
+      {children}
+    </AppModal>
+  );
 }
-
-const styles = StyleSheet.create({
-    modal: {
-        backgroundColor: "white",
-        alignSelf: "center",
-        borderRadius: 8,
-        padding: 16,
-        shadowColor: "#000",
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    modalMainContent: {
-        flex: 1,
-    },
-    defaultWidth: {
-        width: "auto",
-    },
-    defaultHeight: {
-        height: "auto",
-    }
-});

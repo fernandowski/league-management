@@ -1,10 +1,13 @@
-import {StyleSheet, TouchableOpacity, View} from "react-native";
-import {Card, DataTable, Text} from "react-native-paper";
-import React, {useEffect, useState} from "react";
+import {StyleSheet, View} from "react-native";
+import React, {useCallback, useEffect, useState} from "react";
 import {useData} from "@/hooks/useData";
 import {useOrganizationStore} from "@/stores/organizationStore";
 import Pagination from "@/components/Pagination/Pagination";
 import {useRouter} from "expo-router";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppCard } from "@/components/ui/AppCard";
+import { AppText } from "@/components/ui/AppText";
+import {useAppTheme} from "@/theme/theme";
 
 interface Season {
     id: string;
@@ -25,68 +28,76 @@ interface SeasonTableIProps {
 export default function SeasonsTable(props: SeasonTableIProps) {
     const {organization} = useOrganizationStore();
     const router = useRouter()
+    const theme = useAppTheme();
 
     const [page, setPage] = useState(0);
     const [seasons, setSeasons] = useState<Season[]>([]);
     const [total, setTotal] = useState(0);
-    const [numberOfItemsPerPage, onItemsPerPageChange] = useState(10);
+    const [numberOfItemsPerPage] = useState(10);
 
     const {fetchData} = useData<SeasonResponse>();
 
     const from = page * numberOfItemsPerPage;
 
-    useEffect(() => {
-        const fetchSeasons = async () => {
-            const offsetFilter = `offset=${encodeURIComponent(from)}`;
-            const limitFilter = `limit=${encodeURIComponent(numberOfItemsPerPage)}`;
-            const response = await fetchData(
-                `/v1/leagues/${props.leagueId}/seasons?${[offsetFilter, limitFilter].join(
-                    "&"
-                )}`
-            );
-            if (response) {
-                setSeasons(response.data);
-                setTotal(response.total);
-            }
-        };
+    const fetchSeasons = useCallback(async () => {
+        const offsetFilter = `offset=${encodeURIComponent(from)}`;
+        const limitFilter = `limit=${encodeURIComponent(numberOfItemsPerPage)}`;
+        const response = await fetchData(
+            `/v1/leagues/${props.leagueId}/seasons?${[offsetFilter, limitFilter].join(
+                "&"
+            )}`
+        );
+        if (response) {
+            setSeasons(response.data);
+            setTotal(response.total);
+        }
+    }, [fetchData, from, numberOfItemsPerPage, props.leagueId]);
 
+    useEffect(() => {
         if (props.leagueId) {
             fetchSeasons();
         }
-    }, [props.leagueId, page, numberOfItemsPerPage]);
+    }, [fetchSeasons, props.leagueId]);
 
     useEffect(() => {
         if (page !== 0) {
             setPage(0);
         }
-    }, [numberOfItemsPerPage, organization]);
+    }, [numberOfItemsPerPage, organization, page]);
 
     return (
         <View>
             <Pagination currentPage={page} totalItems={total} itemsPerPage={10} onPageChange={setPage}/>
             {
                 seasons.map((season: Season) => (
-                    <Card style={{marginBottom: 8, marginLeft: 1, marginRight: 1}} key={season.id}>
-                        <Card.Content>
+                    <AppCard style={{marginBottom: 8, marginLeft: 1, marginRight: 1}} key={season.id}>
+                        <AppCard.Content>
                             <View>
                                 <View>
-                                    <Text style={styles.title}>{season.name}</Text>
+                                    <AppText style={[styles.title, {color: theme.colors.onSurface}]}>{season.name}</AppText>
                                 </View>
                                 <View>
-                                    <Text style={styles.label}>
-                                        Status: <Text>{season.status}</Text>
-                                    </Text>
+                                    <AppText style={[styles.label, {color: theme.colors.onSurfaceVariant}]}>
+                                        Status: {season.status}
+                                    </AppText>
                                 </View>
                             </View>
-                        </Card.Content>
-                        <Card.Actions>
-                            <TouchableOpacity
-                                style={styles.link}
+                        </AppCard.Content>
+                        <AppCard.Actions>
+                            <AppButton
+                                mode="contained-tonal"
+                                style={[
+                                    styles.link,
+                                    {
+                                        backgroundColor: theme.colors.primaryContainer,
+                                        borderColor: theme.colors.primary,
+                                    }
+                                ]}
                                 onPress={() => router.push(`/dashboard/seasons/${season.id}`)}>
-                                <Text style={styles.linkText}>Details</Text>
-                            </TouchableOpacity>
-                        </Card.Actions>
-                    </Card>
+                                <AppText style={[styles.linkText, {color: theme.colors.primary}]}>Details</AppText>
+                            </AppButton>
+                        </AppCard.Actions>
+                    </AppCard>
                 ))
             }
         </View>
@@ -97,14 +108,13 @@ export default function SeasonsTable(props: SeasonTableIProps) {
 const styles = StyleSheet.create({
     link: {
         borderRadius: 8,
+        borderWidth: 1,
         paddingHorizontal: 16,
         paddingVertical: 8,
-        backgroundColor: 'rgba(0, 0, 0, 0.00)',
-        borderColor: "#0056b3"
     },
     linkText: {
         fontSize: 14,
-        color: 'rgb(103, 80, 164)'
+        fontWeight: "600",
     },
     title: {
         fontSize: 18,
@@ -113,7 +123,6 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 14,
-        color: "#555",
     },
     paginationContainer: {
         alignSelf: "flex-end"

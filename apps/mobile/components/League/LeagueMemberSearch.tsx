@@ -1,5 +1,5 @@
-import {useEffect, useState} from "react";
-import {Button, DataTable, Searchbar, Text} from "react-native-paper";
+import {useCallback, useEffect, useState} from "react";
+import {Button, DataTable, Searchbar} from "react-native-paper";
 import {View} from "react-native";
 import {TeamResponse, useData} from "@/hooks/useData";
 import {useDebounce} from "@/hooks/useDebounce";
@@ -20,18 +20,18 @@ export interface Team {
 
 export default function LeagueMemberSearch(props: LeagueMemberSearchProps) {
     const [searchQuery, setSearchQuery] = useState('');
-    const {fetchData, fetching, error} = useData<TeamResponse[]>();
+    const {fetchData, fetching} = useData<TeamResponse[]>();
     const [teams, setTeams] = useState<Team[]>([]);
     const debouncedSearchQuery = useDebounce(searchQuery, 800);
 
-    const fetchTeams = async (term: string) => {
+    const fetchTeams = useCallback(async (term: string) => {
         const encodedTerm: string = encodeURIComponent(`%${term}%`)
         const response: TeamResponse[] | undefined = await fetchData(`/v1/teams/?organization_id=${props.organizationId}&term=${encodedTerm}`);
         if (response) {
             const teams: Team[] = response.map((team: Team) => ({id: team.id, name: team.name}));
             setTeams(teams)
         }
-    }
+    }, [fetchData, props.organizationId])
 
     const handleAdd = async (teamId: string) => {
         try {
@@ -52,7 +52,7 @@ export default function LeagueMemberSearch(props: LeagueMemberSearchProps) {
         if (debouncedSearchQuery !== '' && !fetching) {
             fetchTeams(debouncedSearchQuery)
         }
-    }, [debouncedSearchQuery]);
+    }, [debouncedSearchQuery, fetchTeams, fetching]);
 
     return (
         <View>

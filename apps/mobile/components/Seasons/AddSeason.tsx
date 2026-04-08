@@ -1,7 +1,9 @@
-import {Button, Portal, Surface, Text} from "react-native-paper";
+import {Surface} from "react-native-paper";
 import {StyleSheet, View} from "react-native";
 import AddSeasonModal from "@/components/Seasons/AddSeasonModal";
 import React, {useState} from "react";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppText } from "@/components/ui/AppText";
 
 
 export interface AddSeasonProps {
@@ -23,12 +25,10 @@ export default function AddSeason(props: AddSeasonProps) {
     return (
         <Surface style={styles.surfaceContainer} elevation={4}>
             <View style={[styles.buttonContainer]}>
-                <Text>No Season Configured</Text>
-                <Button mode={'elevated'} onPress={openSeasonModal}>+ Add Season</Button>
+                <AppText>No Season Configured</AppText>
+                <AppButton mode={'elevated'} onPress={openSeasonModal}>+ Add Season</AppButton>
             </View>
-            <Portal>
-                <AddSeasonModal onSave={handleSave} onClose={openSeasonModal} open={openModal} leagueId={props.leagueId}/>
-            </Portal>
+            <AddSeasonModal onSave={handleSave} onClose={openSeasonModal} open={openModal} leagueId={props.leagueId}/>
         </Surface>
     )
 }

@@ -59,7 +59,7 @@ export function useLeagueData(): {
 
             setData(leagues)
             setTotal(response.total)
-        } catch (e) {
+        } catch {
             setError("Error Fetching leagues");
             setFetching(false);
         }

@@ -1,5 +1,8 @@
-import {Button, Card, Divider, IconButton, Text} from "react-native-paper";
+import {Divider} from "react-native-paper";
 import {View, StyleSheet} from "react-native";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppCard } from "@/components/ui/AppCard";
+import { AppText } from "@/components/ui/AppText";
 
 export interface LeagueMember {
     teamName: string
@@ -16,9 +19,9 @@ export interface LeagueMembersProps {
 export default function LeagueMembers(props: LeagueMembersProps) {
     return (
         <View style={[styles.container]}>
-            <Card style={[styles.card]}>
-                <Card.Title title={"League Members"}/>
-                <Card.Content>
+            <AppCard style={[styles.card]}>
+                <AppCard.Title title={"League Members"}/>
+                <AppCard.Content>
                     <View>
                         {
                             props.members.map((member: LeagueMember) => {
@@ -26,9 +29,9 @@ export default function LeagueMembers(props: LeagueMembersProps) {
                                     <View key={member.id}>
                                         <Divider style={{marginTop: 4}}/>
                                         <View style={styles.row} key={member.id}>
-                                            <View style={{flex: 1}}><Text>{member.teamName}</Text></View>
+                                            <View style={{flex: 1}}><AppText>{member.teamName}</AppText></View>
                                             <View>
-                                                <Button mode={'contained'} style={[styles.button]} onPress={() => props.onRemove(member.id)}>Remove</Button>
+                                                <AppButton mode={'contained'} style={[styles.button]} onPress={() => props.onRemove(member.id)}>Remove</AppButton>
                                             </View>
                                         </View>
                                     </View>
@@ -36,8 +39,8 @@ export default function LeagueMembers(props: LeagueMembersProps) {
                             })
                         }
                     </View>
-                </Card.Content>
-            </Card>
+                </AppCard.Content>
+            </AppCard>
         </View>
     )
 }

@@ -1,5 +1,5 @@
 import {View, StyleSheet, useWindowDimensions} from "react-native";
-import React, {useEffect, useState} from "react";
+import React, {useCallback, useEffect} from "react";
 import {LeagueDetailResponse, useData} from "@/hooks/useData";
 import LeagueDetailsCard from "@/components/League/LeagueDetailsCard";
 import MembershipView from "@/components/Membership/MembershipView";
@@ -18,25 +18,21 @@ export default function LeagueDetails(props: LeagueDetailsProps): React.JSX.Elem
 
     const {fetchData, data} = useData<LeagueDetailResponse>();
 
-    const fetch = async () => {
-        fetchData(`/v1/leagues/${props.leagueId}`);
-    }
-
-    const onMemberRefresh = () => {
-        fetch();
-    }
+    const fetchLeagueDetails = useCallback(async () => {
+        await fetchData(`/v1/leagues/${props.leagueId}`);
+    }, [fetchData, props.leagueId]);
 
     const onSeasonAdded = () => {
-        fetch();
+        fetchLeagueDetails();
     }
 
     const onSeasonPlanned = () => {
-        fetch();
+        fetchLeagueDetails();
     }
 
     useEffect(() => {
-        fetch();
-    }, [props.leagueId, props.refresh]);
+        fetchLeagueDetails();
+    }, [fetchLeagueDetails, props.refresh]);
 
     if (!data) {
         return <></>
@@ -51,7 +47,7 @@ export default function LeagueDetails(props: LeagueDetailsProps): React.JSX.Elem
             </View>
             <View style={styles.tabsContainer}>
                 <Tabs tabs={[
-                    {key: 'membership', title: 'Membership', view: <MembershipView leagueId={props.leagueId} onMemberRefresh={onMemberRefresh}/>},
+                    {key: 'membership', title: 'Membership', view: <MembershipView leagueId={props.leagueId} onMemberRefresh={fetchLeagueDetails}/>},
                     {key: 'season', title: 'Season', view: <SeasonTabView league={data} onSeasonAdded={onSeasonAdded} onSeasonPlanned={onSeasonPlanned}/>},
                 ]}>
                 </Tabs>

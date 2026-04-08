@@ -1,5 +1,4 @@
 import {View, StyleSheet} from "react-native";
-import {Button, Modal, Portal, Text} from "react-native-paper";
 import TeamList from "@/components/Teams/TeamList";
 import {useOrganizationStore} from "@/stores/organizationStore";
 import {useCallback, useState} from "react";
@@ -10,6 +9,9 @@ import Joi from "joi";
 import {useForm} from "react-hook-form";
 import {joiResolver} from "@hookform/resolvers/joi";
 import ViewContent from "@/components/Layout/ViewContent";
+import StyledModal from "@/components/StyledModal";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppText } from "@/components/ui/AppText";
 
 export interface Team {
     id: string
@@ -53,7 +55,7 @@ export default function TeamOverview() {
             })
             fetchTeams();
             setShowModal(!showModal);
-        } catch (e) {
+        } catch {
 
         }
     }
@@ -66,7 +68,7 @@ export default function TeamOverview() {
                 name: team.name,
                 organizationName: team.organization_name
             })));
-        } catch (e) {
+        } catch {
             setTeams([]);
         }
     }, [organization])
@@ -82,17 +84,15 @@ export default function TeamOverview() {
 
     return (
         <ViewContent>
-            <Button style={[styles.addTeamButton]} mode={"elevated"} onPress={handleOpenModal}> + Add Team </Button>
+            <AppButton style={[styles.addTeamButton]} mode={"elevated"} onPress={handleOpenModal}> + Add Team </AppButton>
             <TeamList data={teams}/>
-            <Portal>
-                <Modal visible={showModal} dismissable={false} contentContainerStyle={[styles.modal]}>
-                    <View style={[styles.formContainer]}>
-                        <Text>Organization Name</Text>
-                        <ControlledTextInput label='Name' name={'name'} control={control} error={errors.name?.message}/>
-                        <Button style={{alignSelf: "flex-end"}} onPress={handleSubmit(handleSave)}>Save</Button>
-                    </View>
-                </Modal>
-            </Portal>
+            <StyledModal isOpen={showModal} onDismiss={handleOpenModal} contentContainerStyle={styles.modal}>
+                <View style={[styles.formContainer]}>
+                    <AppText variant="titleMedium">Team Name</AppText>
+                    <ControlledTextInput label='Name' name={'name'} control={control} error={errors.name?.message}/>
+                    <AppButton style={{alignSelf: "flex-end"}} onPress={handleSubmit(handleSave)}>Save</AppButton>
+                </View>
+            </StyledModal>
         </ViewContent>
     )
 }
@@ -107,13 +107,9 @@ const styles = StyleSheet.create({
         padding: 16
     },
     modal: {
-        flex: 0.8,
-        padding: 16,
-        backgroundColor: "white",
         width: "80%",
         maxHeight: 400,
         maxWidth: 400,
-        zIndex: 200,
-        alignSelf: "center"
+        alignSelf: "center",
     }
 })

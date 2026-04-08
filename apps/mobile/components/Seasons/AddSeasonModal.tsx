@@ -1,12 +1,12 @@
 import {StyleSheet, View} from "react-native";
-import {Button, Modal, Text} from "react-native-paper";
 import ControlledTextInput from "@/components/FormControls/ControlledTextInput";
-import {useOrganizationStore} from "@/stores/organizationStore";
 import {useForm} from "react-hook-form";
 import {joiResolver} from "@hookform/resolvers/joi";
 import Joi from "joi";
 import {apiRequest} from "@/api/api";
-import {useEffect} from "react";
+import StyledModal from "@/components/StyledModal";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppText } from "@/components/ui/AppText";
 
 export interface AddSeasonModalProps {
     onSave: () => void
@@ -45,31 +45,30 @@ export default function AddSeasonModal(props: AddSeasonModalProps) {
     }
 
     return (
-        <Modal visible={props.open} dismissable={false} contentContainerStyle={[styles.modal]}>
+        <StyledModal
+            isOpen={props.open}
+            onDismiss={onClose}
+            contentContainerStyle={styles.modal}
+        >
             <View style={[styles.formContainer]}>
                 <View style={{gap: 16}}>
-                    <Text>Season Name: </Text>
+                    <AppText variant="titleMedium">Season Name</AppText>
                     <ControlledTextInput  name={'name'} control={control} error={errors.name?.message}/>
                 </View>
                 <View style={{flexDirection: "row", justifyContent: "flex-end"}}>
-                    <Button onPress={onClose}>Cancel</Button>
-                    <Button onPress={handleSubmit(handleSave)}>Save</Button>
+                    <AppButton onPress={onClose}>Cancel</AppButton>
+                    <AppButton onPress={handleSubmit(handleSave)}>Save</AppButton>
                 </View>
             </View>
-        </Modal>
+        </StyledModal>
     )
 }
 
 const styles = StyleSheet.create({
     modal: {
-        flex: 0.8,
-        padding: 16,
-        backgroundColor: "white",
         width: "80%",
         maxHeight: 400,
         maxWidth: 400,
-        zIndex: 200,
-        alignSelf: "center"
     },
     formContainer: {
         flex: 1,

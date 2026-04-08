@@ -1,8 +1,10 @@
 import StyledModal from "@/components/StyledModal";
-import {Button, Text, TextInput} from "react-native-paper";
+import {Button, Text} from "react-native-paper";
 import {View, StyleSheet, useWindowDimensions, DimensionValue} from "react-native";
 import {useEffect, useState} from "react";
 import {MatchScore} from "@/hooks/useData";
+import {useAppTheme} from "@/theme/theme";
+import { AppTextField } from "@/components/ui/AppTextField";
 
 interface ManageMatchModalProps {
     isOpen: boolean;
@@ -17,6 +19,7 @@ export default function ManageMatchScoreModal(props: ManageMatchModalProps) {
     const [awayScore, setAwayScore] = useState(String(props.matchDetails.away_score));
     const dimensions = useWindowDimensions();
     const isLargeScreen = dimensions.width >= 768;
+    const theme = useAppTheme();
 
     const handleScoreChange = (
         value: string,
@@ -40,32 +43,34 @@ export default function ManageMatchScoreModal(props: ManageMatchModalProps) {
         <StyledModal isOpen={props.isOpen} width={modalWidth}>
             <View style={{alignItems: "center"}}>
                 <View style={[styles.header, !isLargeScreen ? {alignItems: "center"}: undefined]}>
-                    <Text style={styles.title}>
+                    <Text style={[styles.title, {color: theme.colors.onSurface}]}>
                         {props.matchDetails.home_team}
                     </Text>
-                    <Text style={styles.title}>
+                    <Text style={[styles.title, {color: theme.colors.onSurfaceVariant}]}>
                         vs.
                     </Text>
-                    <Text style={styles.title}>
+                    <Text style={[styles.title, {color: theme.colors.onSurface}]}>
                         {props.matchDetails.away_team}
                     </Text>
                 </View>
                 <View style={styles.body}>
                     <View style={[styles.scoreContainer, !isLargeScreen ? {flexDirection: "column"}: undefined]}>
                         <View style={styles.team}>
-                            <Text style={styles.teamName}>{props.matchDetails.home_team}</Text>
-                            <TextInput
-                                style={styles.scoreInput}
+                            <Text style={[styles.teamName, {color: theme.colors.onSurface}]}>{props.matchDetails.home_team}</Text>
+                            <AppTextField
+                                style={[styles.scoreInput, {backgroundColor: theme.colors.surfaceVariant}]}
+                                outlineStyle={{borderColor: theme.colors.outline, borderRadius: 10}}
                                 value={homeScore}
                                 keyboardType="numeric"
                                 onChangeText={(value) => handleScoreChange(value, setHomeScore)}
                             />
                         </View>
-                        <Text style={styles.separator}> - </Text>
+                        <Text style={[styles.separator, {color: theme.colors.onSurfaceVariant}]}> - </Text>
                         <View style={styles.team}>
-                            <Text style={styles.teamName}>{props.matchDetails.away_team}</Text>
-                            <TextInput
-                                style={styles.scoreInput}
+                            <Text style={[styles.teamName, {color: theme.colors.onSurface}]}>{props.matchDetails.away_team}</Text>
+                            <AppTextField
+                                style={[styles.scoreInput, {backgroundColor: theme.colors.surfaceVariant}]}
+                                outlineStyle={{borderColor: theme.colors.outline, borderRadius: 10}}
                                 value={awayScore}
                                 keyboardType="numeric"
                                 onChangeText={(value) => handleScoreChange(value, setAwayScore)}
@@ -122,10 +127,7 @@ const styles = StyleSheet.create({
     scoreInput: {
         width: 60,
         height: 40,
-        borderWidth: 1,
-        borderColor: "#ddd",
         textAlign: "center",
-        borderRadius: 4,
     },
     separator: {
         fontSize: 24,

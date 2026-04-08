@@ -1,6 +1,7 @@
 import {SeasonDetailResponse} from "@/hooks/useData";
 import {StyleSheet, View} from "react-native";
-import {Button, Surface, Text} from "react-native-paper";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppText } from "@/components/ui/AppText";
 
 export interface SeasonInformationProps {
     season: SeasonDetailResponse,
@@ -11,26 +12,26 @@ export default function SeasonInformation(props: SeasonInformationProps) {
             <View style={styles.surfaceCard}>
                     <View style={{flexDirection: "row", justifyContent: "space-between"}}>
                         <View style={[styles.row]}>
-                            <Text style={styles.label}>Name: </Text>
-                            <Text style={styles.value}>{props.season.name} </Text>
+                            <AppText style={styles.label}>Name: </AppText>
+                            <AppText style={styles.value}>{props.season.name} </AppText>
                         </View>
                         {
                             ['planned'].indexOf(props.season.status) > -1 && (
                                 <View>
-                                    <Button onPress={props.handleSeasonStart}>Start Season</Button>
+                                    <AppButton onPress={props.handleSeasonStart}>Start Season</AppButton>
                                 </View>
                             )
                         }
                     </View>
                     <View style={styles.row}>
-                        <Text style={styles.label}>Status: </Text>
-                        <Text style={styles.value}>{props.season.status} </Text>
+                        <AppText style={styles.label}>Status: </AppText>
+                        <AppText style={styles.value}>{props.season.status} </AppText>
                     </View>
                     {
                         props.season.rounds.length > 0 ?? (
                             <View style={styles.row}>
-                                <Text style={styles.label}>Status: </Text>
-                                <Text style={styles.value}>{props.season.status} </Text>
+                                <AppText style={styles.label}>Status: </AppText>
+                                <AppText style={styles.value}>{props.season.status} </AppText>
                             </View>
                         )
                     }

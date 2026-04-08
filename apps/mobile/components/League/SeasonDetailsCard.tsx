@@ -1,29 +1,30 @@
 import {LeagueDetailsCardProps} from "@/components/League/LeagueDetailsCard";
-import {Card, Text} from "react-native-paper";
 import {StyleSheet, View} from "react-native";
 import React from "react";
+import { AppCard } from "@/components/ui/AppCard";
+import { AppText } from "@/components/ui/AppText";
 
 export default function SeasonDetailsCard(props: LeagueDetailsCardProps) {
     return (
-        <Card>
-            <Card.Title title={"Current Season"}></Card.Title>
-            <Card.Content>
+        <AppCard>
+            <AppCard.Title title={"Current Season"}></AppCard.Title>
+            <AppCard.Content>
                 <View>
                     <View style={styles.row}>
-                        <Text style={styles.label}>Season ID: </Text>
-                        <Text>{props.data.season.id}</Text>
+                        <AppText style={styles.label}>Season ID: </AppText>
+                        <AppText>{props.data.season.id}</AppText>
                     </View>
                     <View style={styles.row}>
-                        <Text style={styles.label}>Name: </Text>
-                        <Text>{props.data.season.name}</Text>
+                        <AppText style={styles.label}>Name: </AppText>
+                        <AppText>{props.data.season.name}</AppText>
                     </View>
                     <View style={styles.row}>
-                        <Text style={styles.label}>Status: </Text>
-                        <Text>{props.data.season.status}</Text>
+                        <AppText style={styles.label}>Status: </AppText>
+                        <AppText>{props.data.season.status}</AppText>
                     </View>
                 </View>
-            </Card.Content>
-        </Card>
+            </AppCard.Content>
+        </AppCard>
     )
 }
 

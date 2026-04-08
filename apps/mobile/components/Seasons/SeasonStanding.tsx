@@ -1,8 +1,9 @@
 import {View} from "react-native";
-import {Surface, Text} from "react-native-paper";
+import {Surface} from "react-native-paper";
 import {useEffect} from "react";
 import {SeasonStandings, SeasonStandingsResponse, useData} from "@/hooks/useData";
 import TableList, {ColumnDefinition} from "@/components/TableList/TableList";
+import { AppText } from "@/components/ui/AppText";
 
 
 export interface SeasonStandingProps {
@@ -28,16 +29,16 @@ export default function SeasonStanding(props: SeasonStandingProps) {
         if (props.seasonId) {
             fetchData(`/v1/seasons/${props.seasonId}/standings`)
         }
-    }, [props.seasonId]);
+    }, [fetchData, props.seasonId]);
 
     if (fetching) {
-        return <View><Text>Fetching Details</Text></View>
+        return <View><AppText>Fetching Details</AppText></View>
     }
 
     return (
         <View>
             <Surface>
-                {error && <Text>{error}</Text>}
+                {error && <AppText>{error}</AppText>}
                 {data && <TableList data={data.standings} columns={columns}/>}
             </Surface>
         </View>

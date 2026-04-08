@@ -1,29 +1,30 @@
-import {Card, Text} from "react-native-paper";
 import {View, StyleSheet} from "react-native";
 import React from "react";
 import {LeagueDetailResponse} from "@/hooks/useData";
+import { AppCard } from "@/components/ui/AppCard";
+import { AppText } from "@/components/ui/AppText";
 
 export interface LeagueDetailsCardProps {
     data: LeagueDetailResponse
 }
 const LeagueDetailsCard = (props: LeagueDetailsCardProps) => {
     return (
-        <Card>
-            <Card.Title title={"League Info"} titleStyle={{fontWeight: "bold"}}></Card.Title>
-            <Card.Content>
+        <AppCard>
+            <AppCard.Title title={"League Info"} titleStyle={{fontWeight: "bold"}}></AppCard.Title>
+            <AppCard.Content>
                 <View style={{flexDirection: "row",  flexWrap: "wrap", gap: 18}}>
                     <View>
                         <View style={styles.row}>
-                            <Text style={styles.label}>League ID: </Text>
-                            <Text>{props.data.id}</Text>
+                            <AppText style={styles.label}>League ID: </AppText>
+                            <AppText>{props.data.id}</AppText>
                         </View>
                         <View style={styles.row}>
-                            <Text style={styles.label}>Name: </Text>
-                            <Text>{props.data.name}</Text>
+                            <AppText style={styles.label}>Name: </AppText>
+                            <AppText>{props.data.name}</AppText>
                         </View>
                         <View style={styles.row}>
-                            <Text style={styles.label}>Active Members: </Text>
-                            <Text>{props.data.active_members}</Text>
+                            <AppText style={styles.label}>Active Members: </AppText>
+                            <AppText>{props.data.active_members}</AppText>
                         </View>
                     </View>
                     <View style={{width: "100%"}}>
@@ -32,31 +33,31 @@ const LeagueDetailsCard = (props: LeagueDetailsCardProps) => {
                                 (
                                     <View>
                                         <View style={styles.row}>
-                                            <Text style={styles.label}>Season ID: </Text>
-                                            <Text>{props.data.season.id}</Text>
+                                            <AppText style={styles.label}>Season ID: </AppText>
+                                            <AppText>{props.data.season.id}</AppText>
                                         </View>
                                         <View style={styles.row}>
-                                            <Text style={styles.label}>Name: </Text>
-                                            <Text>{props.data.season.name}</Text>
+                                            <AppText style={styles.label}>Name: </AppText>
+                                            <AppText>{props.data.season.name}</AppText>
                                         </View>
                                         <View style={styles.row}>
-                                            <Text style={styles.label}>Status: </Text>
-                                            <Text>{props.data.season.status}</Text>
+                                            <AppText style={styles.label}>Status: </AppText>
+                                            <AppText>{props.data.season.status}</AppText>
                                         </View>
                                     </View>
                                 )
                                     :
                                     (
                                         <View>
-                                            <Text style={styles.messageText}> No Season has been configured. Go to Seasons section to configure one. </Text>
+                                            <AppText style={styles.messageText}> No Season has been configured. Go to Seasons section to configure one. </AppText>
                                         </View>
                                     )
                         }
 
                     </View>
                 </View>
-            </Card.Content>
-        </Card>
+            </AppCard.Content>
+        </AppCard>
     )
 }
 export default LeagueDetailsCard;

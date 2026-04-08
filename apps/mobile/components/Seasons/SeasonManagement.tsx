@@ -1,4 +1,4 @@
-import {View, StyleSheet} from "react-native";
+import {View} from "react-native";
 import Tabs from "@/components/Layout/Tabs";
 import SeasonStanding from "@/components/Seasons/SeasonStanding";
 import SeasonMatchUpManagement from "@/components/Seasons/SeasonMatchUpManagement";
@@ -21,5 +21,3 @@ export default function SeasonManagement(props: SeasonManagementProps) {
         </View>
     )
 }
-
-const styles = StyleSheet.create({})

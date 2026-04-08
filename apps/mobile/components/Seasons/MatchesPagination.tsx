@@ -1,6 +1,7 @@
-import {TouchableOpacity, View, StyleSheet} from "react-native";
-import {IconButton, Text} from "react-native-paper";
-import {container} from "ansi-fragments";
+import {View, StyleSheet} from "react-native";
+import {IconButton} from "react-native-paper";
+
+import { AppText } from "@/components/ui/AppText";
 
 export interface MatchesPaginationProps {
     currentRound: string
@@ -10,13 +11,9 @@ export interface MatchesPaginationProps {
 export default function MatchesPagination(props: MatchesPaginationProps) {
     return (
         <View style={styles.container}>
-            <TouchableOpacity>
-                <IconButton icon="chevron-left" size={20} onPress={props.onPrevious}/>
-            </TouchableOpacity>
-            <View><Text style={styles.roundText}>Round {props.currentRound}</Text></View>
-            <TouchableOpacity>
-                <IconButton icon="chevron-right" size={20} onPress={props.onNext}/>
-            </TouchableOpacity>
+            <IconButton icon="chevron-left" size={20} onPress={props.onPrevious}/>
+            <View><AppText style={styles.roundText}>Round {props.currentRound}</AppText></View>
+            <IconButton icon="chevron-right" size={20} onPress={props.onNext}/>
         </View>
     )
 }

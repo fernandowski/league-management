@@ -1,13 +1,13 @@
 import {StyleSheet, View} from "react-native";
-import {Button, Modal, Text} from "react-native-paper";
 import ControlledTextInput from "@/components/FormControls/ControlledTextInput";
-import {useState} from "react";
 import Joi from "joi";
 import {useForm} from "react-hook-form";
 import {joiResolver} from "@hookform/resolvers/joi";
 import {apiRequest} from "@/api/api";
 import {useOrganizationStore} from "@/stores/organizationStore";
 import StyledModal from "@/components/StyledModal";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppText } from "@/components/ui/AppText";
 
 const schema = Joi.object({
     name: Joi.string()
@@ -45,22 +45,22 @@ export default function AddLeagueModal(props: AddLeagueModalProps) {
                 }
             })
             props.onSave();
-        } catch (e) {
+        } catch {
 
         }
     }
 
     return (
-        <StyledModal isOpen={props.open}>
+        <StyledModal isOpen={props.open} onDismiss={props.onClose}>
             <View style={[styles.formContainer, styles.formFields]}>
                 <View>
-                    <Text>Team Name</Text>
+                    <AppText variant="titleMedium">League Name</AppText>
                     <ControlledTextInput label='Name' name={'name'} control={control} error={errors.name?.message}/>
                 </View>
             </View>
             <View style={styles.formActionButtons}>
-                <Button onPress={props.onClose}>Close</Button>
-                <Button onPress={handleSubmit(handleSave)}>Save</Button>
+                <AppButton onPress={props.onClose}>Close</AppButton>
+                <AppButton onPress={handleSubmit(handleSave)}>Save</AppButton>
             </View>
         </StyledModal>
     )
@@ -79,5 +79,3 @@ const styles = StyleSheet.create({
         flexDirection: "row"
     }
 })
-
-

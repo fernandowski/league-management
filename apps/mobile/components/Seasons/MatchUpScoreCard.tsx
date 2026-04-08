@@ -1,6 +1,8 @@
 import {MatchScore} from "@/hooks/useData";
-import {Surface, Text} from "react-native-paper";
-import {TouchableOpacity, View, StyleSheet, useWindowDimensions} from "react-native";
+import {Surface} from "react-native-paper";
+import {Pressable, View, StyleSheet, useWindowDimensions} from "react-native";
+import { AppText } from "@/components/ui/AppText";
+import { useAppTheme } from "@/theme/theme";
 
 export interface MatchUpScoreCardProps {
     data: MatchScore;
@@ -10,31 +12,38 @@ export interface MatchUpScoreCardProps {
 export default function MatchUpScoreCard(props: MatchUpScoreCardProps) {
     const dimensions = useWindowDimensions();
     const isLargeScreen = dimensions.width >= 768;
+    const theme = useAppTheme();
     return (
         <Surface style={{flex: 1}}>
-            <TouchableOpacity style={{paddingVertical: 18}} onPress={() => props.onPress(props.data)}>
+            <Pressable
+                style={({ pressed }) => [styles.pressable, pressed && {backgroundColor: theme.colors.primaryContainer}]}
+                onPress={() => props.onPress(props.data)}
+            >
                 <View style={[styles.row, styles.center]}>
                     <View style={[styles.row]}>
-                        <Text style={[
+                        <AppText style={[
                              {textAlign: "right"},
                             isLargeScreen ? styles.labelWidth : styles.smallScreenLabelWidth
-                        ]}>{props.data.home_team}</Text>
+                        ]}>{props.data.home_team}</AppText>
                     </View>
                     <View style={[styles.score, styles.row]}>
-                        <Text>{props.data.home_score}</Text>
-                        <Text> - </Text>
-                        <Text>{props.data.away_score}</Text>
+                        <AppText>{props.data.home_score}</AppText>
+                        <AppText> - </AppText>
+                        <AppText>{props.data.away_score}</AppText>
                     </View>
                     <View style={[styles.row,]}>
-                        <Text style={[isLargeScreen ? styles.labelWidth : styles.smallScreenLabelWidth,{textAlign: "left"} ]}>{props.data.away_team}</Text>
+                        <AppText style={[isLargeScreen ? styles.labelWidth : styles.smallScreenLabelWidth,{textAlign: "left"} ]}>{props.data.away_team}</AppText>
                     </View>
                 </View>
-            </TouchableOpacity>
+            </Pressable>
         </Surface>
     )
 }
 
 const styles = StyleSheet.create({
+    pressable: {
+        paddingVertical: 18,
+    },
     teamContainer: {
         flex: 1,
         flexDirection: "row",

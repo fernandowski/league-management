@@ -1,7 +1,8 @@
 import {MatchesResponse, MatchScore} from "@/hooks/useData";
 import {View, StyleSheet} from "react-native";
-import {Divider, Text} from "react-native-paper";
+import {Divider} from "react-native-paper";
 import MatchUpScoreCard from "@/components/Seasons/MatchUpScoreCard";
+import { AppText } from "@/components/ui/AppText";
 
 export interface SeasonMatchUpsListProps {
     data: MatchesResponse;
@@ -11,7 +12,7 @@ export interface SeasonMatchUpsListProps {
 export default function MatchUpRound(props: SeasonMatchUpsListProps) {
     return (
         <View>
-            <View><Text style={styles.roundText}>Round {props.data.round}</Text></View>
+            <View><AppText style={styles.roundText}>Round {props.data.round}</AppText></View>
             <Divider/>
             <View style={[styles.matchUpCardContainer]}>
                 {

@@ -1,59 +1,92 @@
-import {Dimensions, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View} from "react-native";
-import {DrawerNavigationOptions, DrawerNavigationProp} from "@react-navigation/drawer";
-import {ParamListBase, RouteProp} from "@react-navigation/native";
-import {Select} from "@/components/Select/Select";
-import {useOrganizationStore} from "@/stores/organizationStore";
-import {useEffect} from "react";
-import {useNavigation} from "expo-router";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useNavigation } from 'expo-router';
+import { useEffect } from 'react';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import type { DrawerNavigationProp } from '@react-navigation/drawer';
+import { IconButton } from 'react-native-paper';
 
-
-interface HeaderProps {
-    navigation: DrawerNavigationProp<ParamListBase>
-    route: RouteProp<ParamListBase>
-    options: DrawerNavigationOptions
-}
+import { Select } from '@/components/Select/Select';
+import { AppText } from '@/components/ui/AppText';
+import { useOrganizationStore } from '@/stores/organizationStore';
+import { useAppTheme } from '@/theme/theme';
 
 export function Header() {
-    const navigation: DrawerNavigationProp<any> = useNavigation();
-    const dimensions = useWindowDimensions();
-    const isLargeScreen = dimensions.width >= 768;
+  const navigation: DrawerNavigationProp<any> = useNavigation();
+  const dimensions = useWindowDimensions();
+  const isLargeScreen = dimensions.width >= 768;
+  const theme = useAppTheme();
 
-    const {organizations, loading, error, fetchOrganizations, setOrganization, organization} = useOrganizationStore();
-    const onSelectChange = (value: string) => {
-        setOrganization(value);
-    }
+  const { organizations, fetchOrganizations, setOrganization, organization } = useOrganizationStore();
 
-    useEffect(() => {
-        fetchOrganizations();
-    }, [])
+  useEffect(() => {
+    fetchOrganizations();
+  }, [fetchOrganizations]);
 
-    return (
-        <View style={[styles.view]}>
-            { !isLargeScreen && (
-                <TouchableOpacity onPress={() => navigation.openDrawer()}>
-                    <Ionicons name="menu" size={24} color="black" />
-                </TouchableOpacity>
-            )}
+  return (
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.outline,
+          shadowColor: theme.colors.shadow,
+        },
+      ]}
+    >
+      {!isLargeScreen && (
+        <IconButton
+          accessibilityLabel="Open navigation menu"
+          icon={() => <Ionicons name="menu" size={20} color={theme.colors.primary} />}
+          onPress={() => navigation.openDrawer()}
+          mode="contained-tonal"
+          containerColor={theme.colors.primaryContainer}
+          style={styles.menuButton}
+        />
+      )}
 
-            <View style={[styles.select]}>
-                <Text>Organizations: </Text>
-                <Select onChange={onSelectChange} selected={organization} data={organizations.map(organizations => ({label: organizations.name, value: organizations.id}))}/>
-            </View>
-        </View>
-    )
+      <View style={styles.content}>
+        <AppText variant="labelLarge" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+          Organization
+        </AppText>
+        <Select
+          onChange={setOrganization}
+          selected={organization}
+          data={organizations.map((currentOrganization) => ({
+            label: currentOrganization.name,
+            value: currentOrganization.id,
+          }))}
+        />
+      </View>
+    </View>
+  );
 }
 
-const {height: screenHeight} = Dimensions.get('window');
-
 const styles = StyleSheet.create({
-    view: {
-        height: screenHeight * .05,
-    },
-    select: {
-        flex: 1,
-        flexDirection: "row",
-        gap: 16,
-        marginTop: 18
-    }
+  container: {
+    minHeight: 84,
+    borderWidth: 1,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  menuButton: {
+    margin: 0,
+  },
+  content: {
+    flex: 1,
+    gap: 8,
+  },
+  label: {
+    fontSize: 13,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
 });

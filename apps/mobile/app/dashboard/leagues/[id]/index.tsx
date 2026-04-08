@@ -10,7 +10,7 @@ export default function Index() {
 
     const {id} = useLocalSearchParams();
     const [leagueId, setLeagueId] = useState<string>(Array.isArray(id) ? id[0] : id || "");
-    const [refreshLeagueDetails, setRefreshLeagueDetails] = useState(false);
+    const [refreshLeagueDetails] = useState(false);
 
 
     const onLeagueChange = (newLeagueId: string) => {
@@ -21,17 +21,12 @@ export default function Index() {
             setLeagueId(newLeagueId);
         }
     }
-
-    const onMemberRefresh = () => {
-        setRefreshLeagueDetails(!refreshLeagueDetails);
-    }
-
     useEffect(() => {
         const selectedId = Array.isArray(id) ? id[0] : id || "";
         if (selectedId !== leagueId) {
             setLeagueId(selectedId);
         }
-    }, [id]);
+    }, [id, leagueId]);
 
     return (
         <ViewContent>

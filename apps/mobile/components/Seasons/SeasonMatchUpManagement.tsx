@@ -1,10 +1,10 @@
 import {StyleSheet, View} from "react-native";
-import {Text} from "react-native-paper";
 import {useCallback, useEffect, useState} from "react";
 import {MatchesResponse, MatchScore, useData} from "@/hooks/useData";
 import MatchUpRound from "@/components/Seasons/MatchUpRound";
 import ManageMatchScoreModal from "@/components/Seasons/ManageMatchScoreModal";
 import usePost from "@/hooks/usePost";
+import { AppText } from "@/components/ui/AppText";
 
 export interface SeasonMatchUpManagementProps {
     seasonId: string
@@ -41,10 +41,10 @@ export default function SeasonMatchUpManagement(props: SeasonMatchUpManagementPr
             fetchData(`/v1/seasons/${props.seasonId}/matches`)
         }
 
-    }, [props.seasonId]);
+    }, [fetchData, props.seasonId]);
 
     if (!data) {
-        return <View><Text>{error}</Text></View>
+        return <View><AppText>{error}</AppText></View>
     }
 
     return (

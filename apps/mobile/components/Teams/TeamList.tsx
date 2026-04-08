@@ -1,7 +1,8 @@
 import {Animated, View} from "react-native";
 import ScrollView = Animated.ScrollView;
-import {Card, Text} from "react-native-paper";
 import {Team} from "@/components/Teams/TeamOverview";
+import { AppCard } from "@/components/ui/AppCard";
+import { AppText } from "@/components/ui/AppText";
 
 interface props {
     data: Team[]
@@ -12,11 +13,11 @@ export default function TeamList (props: props) {
             <ScrollView>
                 {
                     props.data.map((item) => (
-                        <Card style={{marginBottom: 8, marginLeft: 1, marginRight: 1}} key={item.id}>
-                            <Card.Content>
-                                <Text>{item.name}</Text>
-                            </Card.Content>
-                        </Card>
+                        <AppCard style={{marginBottom: 8, marginLeft: 1, marginRight: 1}} key={item.id}>
+                            <AppCard.Content>
+                                <AppText>{item.name}</AppText>
+                            </AppCard.Content>
+                        </AppCard>
                     ))
                 }
             </ScrollView>

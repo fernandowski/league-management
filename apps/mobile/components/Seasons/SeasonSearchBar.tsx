@@ -1,6 +1,5 @@
 import LeagueDropdown from "@/components/League/LeagueDropdown";
-import {View, StyleSheet} from "react-native";
-import {Button} from "react-native-paper";
+import {View} from "react-native";
 
 interface SeasonsSearchBarProps {
     onLeagueSelection: (value: string) => void
@@ -15,7 +14,3 @@ export default function SeasonSearchBar(props: SeasonsSearchBarProps) {
         </View>
     )
 }
-
-const styles = StyleSheet.create({
-
-})

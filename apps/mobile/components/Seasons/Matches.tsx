@@ -3,7 +3,8 @@ import {View,StyleSheet} from "react-native";
 import MatchesPagination from "@/components/Seasons/MatchesPagination";
 import MatchUpList from "@/components/Seasons/MatchUpList";
 import {useMemo, useState} from "react";
-import {Surface, Text} from "react-native-paper";
+import {Surface} from "react-native-paper";
+import { AppText } from "@/components/ui/AppText";
 
 export interface MatchesProps {
     season: SeasonDetailResponse
@@ -33,7 +34,7 @@ export default function Matches (props: MatchesProps) {
     return (
         <Surface>
             <View style={styles.paginationContainer}>
-                <Text style={styles.seasonSchedule}>Season Schedule</Text>
+                <AppText style={styles.seasonSchedule}>Season Schedule</AppText>
                 <MatchesPagination onNext={handleHandleNextRound} onPrevious={handlePreviousRound} currentRound={props.season.rounds[roundNumber].round_number}/>
             </View>
             <View>

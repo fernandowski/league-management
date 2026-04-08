@@ -6,7 +6,7 @@ export const fetchJWT = async (): Promise<Token> => {
     try {
         const token = await AsyncStorage.getItem('jwt');
         return token;
-    } catch (error) {
+    } catch {
         return "";
     }
 }
@@ -25,7 +25,7 @@ export const JwtIsExpired = (jwt: string): boolean => {
     }
     const {exp}: JwtPayload = jwtDecode(jwt);
 
-    const now: number = new Date().getMilliseconds() / 1000;
+    const now: number = Date.now() / 1000;
 
     return (exp !== undefined && now >= exp);
 

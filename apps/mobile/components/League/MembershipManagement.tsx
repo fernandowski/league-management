@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import LeagueMembers, {LeagueMember} from "@/components/League/LeagueMembers";
 import {LeagueMembershipResponse, useData} from "@/hooks/useData";
 import {View} from "react-native";
@@ -13,10 +13,10 @@ export interface MembershipManagementProps {
 
 export default function MembershipManagement(props: MembershipManagementProps) {
     const [leagueMembers, setLeagueMembers] = useState<LeagueMember[]>([]);
-    const {fetchData, fetching, error} = useData<LeagueMembershipResponse[]>();
+    const {fetchData} = useData<LeagueMembershipResponse[]>();
     const {organization} = useOrganizationStore();
 
-    const fetchMembership = async () => {
+    const fetchMembership = useCallback(async () => {
         const response = await fetchData(`/v1/leagues/${props.leagueId}/members`);
         if (response) {
             const leagueMembers: LeagueMember[] = response.map((member: LeagueMembershipResponse) => ({
@@ -28,7 +28,7 @@ export default function MembershipManagement(props: MembershipManagementProps) {
             setLeagueMembers(leagueMembers);
             props.onFetch && props.onFetch()
         }
-    }
+    }, [fetchData, props])
 
     const handleOnRemove = async (membershipId: string): Promise<void> => {
         await apiRequest(`/v1/leagues/${props.leagueId}/members/${membershipId}`, {method: 'DELETE'})
@@ -36,7 +36,7 @@ export default function MembershipManagement(props: MembershipManagementProps) {
     }
     useEffect(() => {
         fetchMembership();
-    }, [props.leagueId]);
+    }, [fetchMembership]);
     return (
         <View style={{flex: 1}}>
             <View style={{marginTop: 8}}>

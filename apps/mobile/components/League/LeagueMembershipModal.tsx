@@ -1,6 +1,6 @@
-import {StyleSheet, View} from "react-native";
-import {Modal, Text} from "react-native-paper";
+import {StyleSheet} from "react-native";
 import MembershipManagement from "@/components/League/MembershipManagement";
+import StyledModal from "@/components/StyledModal";
 
 export interface LeagueMembershipModalProps {
     organizationId: string,
@@ -11,9 +11,14 @@ export interface LeagueMembershipModalProps {
 
 export default function LeagueMembershipModal(props: LeagueMembershipModalProps) {
     return (
-        <Modal visible={props.open} contentContainerStyle={[styles.modal]} onDismiss={props.onDismiss}>
+        <StyledModal
+            isOpen={props.open}
+            onDismiss={props.onDismiss}
+            dismissable
+            contentContainerStyle={styles.modal}
+        >
             <MembershipManagement leagueId={props.leagueId}/>
-        </Modal>
+        </StyledModal>
     )
 }
 
@@ -21,12 +26,9 @@ export default function LeagueMembershipModal(props: LeagueMembershipModalProps)
 const styles = StyleSheet.create({
     modal: {
         flex: 1,
-        padding: 16,
-        backgroundColor: "white",
         width: "100%",
         maxHeight: '90%',
         maxWidth: '90%',
-        zIndex: 200,
         alignSelf: "center"
     },
     container: {

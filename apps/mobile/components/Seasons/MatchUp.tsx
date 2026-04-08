@@ -1,7 +1,7 @@
 import {Match} from "@/hooks/useData";
 import {View, StyleSheet, Pressable} from "react-native";
-import {Text} from "react-native-paper";
-import {useState} from "react";
+import { AppText } from "@/components/ui/AppText";
+import {useAppTheme} from "@/theme/theme";
 
 
 export interface MatchUpProps {
@@ -9,16 +9,20 @@ export interface MatchUpProps {
 }
 
 export default function MatchUp(props: MatchUpProps) {
+    const theme = useAppTheme();
     return (
-        <Pressable style={styles.container}>
+        <Pressable style={({pressed}) => [
+            styles.container,
+            pressed && {backgroundColor: theme.colors.primaryContainer}
+        ]}>
             <View>
-                <Text style={styles.label}>{props.match.home_team}</Text>
+                <AppText style={[styles.label, {color: theme.colors.onSurface}]}>{props.match.home_team}</AppText>
             </View>
             <View>
-                <Text>VS</Text>
+                <AppText style={{color: theme.colors.onSurfaceVariant}}>VS</AppText>
             </View>
             <View>
-                <Text style={styles.label}>{props.match.away_team}</Text>
+                <AppText style={[styles.label, {color: theme.colors.onSurface}]}>{props.match.away_team}</AppText>
             </View>
         </Pressable>
     )
@@ -29,13 +33,11 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
         justifyContent: "space-evenly",
-        paddingVertical: 18
+        paddingVertical: 18,
+        borderRadius: 16,
     },
     label: {
         fontWeight: "bold",
         width: 80,
     },
-    onHover: {
-        backgroundColor: "green"
-    }
 })

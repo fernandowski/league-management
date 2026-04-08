@@ -1,23 +1,25 @@
 import {Match, Round} from "@/hooks/useData";
-import {Pressable, StyleSheet, View} from "react-native";
-import {Divider, Text} from "react-native-paper";
+import {StyleSheet, View} from "react-native";
+import {Divider} from "react-native-paper";
 import MatchUp from "@/components/Seasons/MatchUp";
-import {useRef, useState} from "react";
+import { AppText } from "@/components/ui/AppText";
+import {useAppTheme} from "@/theme/theme";
 
 export interface MatchUpListProps {
     round: Round
 }
 
 export default function MatchUpList(props: MatchUpListProps ) {
+    const theme = useAppTheme();
     return (
         <View>
-            <View style={styles.header}>
-                <View style={{paddingLeft: 18}}><Text>MatchUps For Round {props.round.round_number }</Text></View>
+            <View style={[styles.header, {backgroundColor: theme.colors.surfaceVariant}]}>
+                <View style={{paddingLeft: 18}}><AppText style={{color: theme.colors.onSurface}}>MatchUps For Round {props.round.round_number }</AppText></View>
             </View>
                 {
                     props.round.matches.map((match: Match) => {
                         return (
-                            <View>
+                            <View key={match.id}>
                                 <MatchUp match={match}/>
                                 <Divider/>
                             </View>
@@ -31,10 +33,9 @@ export default function MatchUpList(props: MatchUpListProps ) {
 
 const styles = StyleSheet.create({
     header: {
-        backgroundColor: "#c7cdd2",
-        justifyContent: "center"
-    },
-    onHover: {
-        backgroundColor: "purple"
+        justifyContent: "center",
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        minHeight: 44,
     }
 })

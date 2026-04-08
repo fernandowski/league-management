@@ -1,20 +1,48 @@
-import {Animated, StyleSheet, View} from "react-native";
+import {StyleSheet, View} from "react-native";
 import {useOrganizationStore} from "@/stores/organizationStore";
-import {Card, Text} from "react-native-paper";
-import ScrollView = Animated.ScrollView;
+import {useAppTheme} from "@/theme/theme";
+import { AppCard } from "@/components/ui/AppCard";
+import { AppText } from "@/components/ui/AppText";
 
 export function OrganizationTable() {
-    const {organizations} = useOrganizationStore();
+    const {organization: selectedOrganizationId, organizations, setOrganization} = useOrganizationStore();
+    const theme = useAppTheme();
+
+    if (organizations.length === 0) {
+        return null;
+    }
+
     return (
         <View style={[styles.outerContainer]}>
-            <ScrollView style={[styles.viewContainer]}>
-                {organizations.map(organization =>
-                    <Card style={{marginTop: 8,}} key={organization.id}>
-                        <Card.Content>
-                            <Text>{organization.name}</Text>
-                        </Card.Content>
-                    </Card>)}
-            </ScrollView>
+            <View style={styles.header}>
+                <AppText variant={"titleMedium"}>Your Organizations</AppText>
+                <AppText variant={"bodyMedium"} style={{color: theme.colors.onSurfaceVariant}}>Select the active organization for the rest of the dashboard.</AppText>
+            </View>
+
+            <View style={[styles.viewContainer]}>
+                {organizations.map((organization) =>
+                    <AppCard
+                        style={[
+                            styles.card,
+                            organization.id === selectedOrganizationId && styles.selectedCard,
+                            organization.id === selectedOrganizationId && {
+                                borderColor: theme.colors.primary,
+                                backgroundColor: theme.colors.primaryContainer,
+                            },
+                        ]}
+                        key={organization.id}
+                        onPress={() => setOrganization(organization.id)}
+                    >
+                        <AppCard.Content>
+                            <AppText variant={"titleMedium"}>{organization.name}</AppText>
+                            <AppText variant={"bodySmall"} style={{color: theme.colors.onSurfaceVariant}}>
+                                {organization.id === selectedOrganizationId
+                                    ? "Selected"
+                                    : "Tap to manage this organization"}
+                            </AppText>
+                        </AppCard.Content>
+                    </AppCard>)}
+            </View>
         </View>
     )
 }
@@ -22,14 +50,19 @@ export function OrganizationTable() {
 
 const styles = StyleSheet.create({
     outerContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center'
+        gap: 12,
+    },
+    header: {
+        gap: 4,
     },
     viewContainer: {
-        flex: 1,
-        width: '80%',
-        paddingLeft: 8,
-        paddingRight: 8
-    }
+        gap: 8,
+    },
+    card: {
+        marginTop: 8,
+        borderWidth: 1,
+    },
+    selectedCard: {
+        borderWidth: 2,
+    },
 })

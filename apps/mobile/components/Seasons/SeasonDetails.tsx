@@ -1,10 +1,14 @@
-import {Button, Card, Divider, Surface, Text} from "react-native-paper";
+import {Divider, Surface} from "react-native-paper";
 import {View, StyleSheet, useWindowDimensions} from "react-native";
-import React, {useEffect} from "react";
+import React, {useCallback, useEffect} from "react";
 import {SeasonDetailResponse, useData} from "@/hooks/useData";
 import SeasonInformation from "@/components/Seasons/SeasonInformation";
 import usePost from "@/hooks/usePost";
 import Matches from "@/components/Seasons/Matches";
+import { AppButton } from "@/components/ui/AppButton";
+import { AppCard } from "@/components/ui/AppCard";
+import { AppText } from "@/components/ui/AppText";
+import {useAppTheme} from "@/theme/theme";
 
 
 export interface SeasonDetailsProps {
@@ -13,14 +17,15 @@ export interface SeasonDetailsProps {
     onSeasonPlanned: () => void
 }
 export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
-    const {fetchData, data: seasonDetails, fetching, error} = useData<SeasonDetailResponse>();
+    const {fetchData, data: seasonDetails} = useData<SeasonDetailResponse>();
     const {postData, result, clearResult} = usePost();
     const dimensions = useWindowDimensions();
     const isLargeScreen = dimensions.width >= 768;
+    const theme = useAppTheme();
 
-    const fetchRoundDetails = async () => {
+    const fetchRoundDetails = useCallback(async () => {
         await fetchData(`/v1/leagues/${props.leagueId}/seasons/${props.seasonId}`);
-    }
+    }, [fetchData, props.leagueId, props.seasonId]);
 
     const handlePlanSeason = async () => {
         await postData(`/v1/leagues/${props.leagueId}/seasons/${props.seasonId}/schedules`);
@@ -37,22 +42,22 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
     useEffect(() => {
         clearResult();
         fetchRoundDetails()
-    }, [props.seasonId, props.leagueId]);
+    }, [clearResult, fetchRoundDetails]);
 
     if (!seasonDetails) {
         return (
             <View>
-                <Card>
-                    <Card.Title title="Loading..." />
-                </Card>
+                <AppCard>
+                    <AppCard.Title title="Loading..." />
+                </AppCard>
             </View>
         );
     }
 
     return (
         <View>
-            <Surface style={{ padding: 18, flexDirection: isLargeScreen ? "row": "column"}}>
-                <View>{result && (<Text style={styles.errorMessage}>{result}</Text>)}</View>
+            <Surface style={{ padding: 18, flexDirection: isLargeScreen ? "row": "column", backgroundColor: theme.colors.surface, borderRadius: 24}}>
+                <View>{result && (<AppText style={[styles.errorMessage, {color: theme.colors.error}]}>{result}</AppText>)}</View>
                 <Divider/>
                 <View style={{flexGrow: 0.5}}>
                     <SeasonInformation season={seasonDetails} handleSeasonStart={handleSeasonStart}/>
@@ -62,8 +67,8 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
                     seasonDetails.status === 'pending' && (
                         <View>
                             <View style={styles.planSeasonContainer}>
-                                <Text>Plan Season</Text>
-                                <Button onPress={handlePlanSeason}>Plan Season</Button>
+                                <AppText style={{color: theme.colors.onSurface}}>Plan Season</AppText>
+                                <AppButton onPress={handlePlanSeason}>Plan Season</AppButton>
                             </View>
                             <Divider/>
                         </View>
@@ -84,18 +89,10 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
 }
 
 const styles = StyleSheet.create({
-    linkText: {
-        fontSize: 14,
-        color: 'rgb(103, 80, 164)'
-    },
     planSeasonContainer: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center"
     },
-    errorMessage: {
-        color: "red"
-    }
+    errorMessage: {}
 });
-
-
