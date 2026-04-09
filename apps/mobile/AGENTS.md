@@ -45,3 +45,6 @@
 - Run `npx nx lint web` after UI changes.
 - If tests exist for the affected area, run `npx nx test web`.
 - Treat lint warnings in touched files as cleanup work, not permanent debt.
+
+## Device Support
+- Always mobil-first then browser.
