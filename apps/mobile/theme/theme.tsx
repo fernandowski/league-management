@@ -58,7 +58,7 @@ export const themeTokens = {
   radius: {
     sm: 10,
     md: 16,
-    lg: 24,
+    lg: 18,
     pill: 999,
   },
   elevation: {
@@ -66,7 +66,11 @@ export const themeTokens = {
     modal: 10,
   },
   typography: {
-    display: 'SpaceMono',
+    display: Platform.select({
+      ios: 'System',
+      android: 'sans-serif-medium',
+      default: 'System',
+    }),
     body: Platform.select({
       ios: 'System',
       android: 'sans-serif',
@@ -79,38 +83,38 @@ const fontConfig = configureFonts({
   config: {
     displayLarge: {
       fontFamily: themeTokens.typography.display,
-      letterSpacing: -0.8,
-      fontWeight: '400',
+      letterSpacing: -0.4,
+      fontWeight: '700',
     },
     displayMedium: {
       fontFamily: themeTokens.typography.display,
-      letterSpacing: -0.6,
-      fontWeight: '400',
+      letterSpacing: -0.3,
+      fontWeight: '700',
     },
     displaySmall: {
       fontFamily: themeTokens.typography.display,
-      letterSpacing: -0.4,
-      fontWeight: '400',
+      letterSpacing: -0.2,
+      fontWeight: '700',
     },
     headlineLarge: {
       fontFamily: themeTokens.typography.display,
-      letterSpacing: -0.4,
-      fontWeight: '400',
+      letterSpacing: -0.2,
+      fontWeight: '700',
     },
     headlineMedium: {
       fontFamily: themeTokens.typography.display,
-      letterSpacing: -0.3,
-      fontWeight: '400',
+      letterSpacing: -0.15,
+      fontWeight: '700',
     },
     headlineSmall: {
       fontFamily: themeTokens.typography.display,
-      letterSpacing: -0.2,
-      fontWeight: '400',
+      letterSpacing: -0.1,
+      fontWeight: '700',
     },
     titleLarge: {
       fontFamily: themeTokens.typography.display,
-      letterSpacing: -0.1,
-      fontWeight: '400',
+      letterSpacing: -0.05,
+      fontWeight: '700',
     },
     titleMedium: {
       fontFamily: themeTokens.typography.body,

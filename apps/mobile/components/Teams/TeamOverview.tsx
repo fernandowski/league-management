@@ -84,6 +84,12 @@ export default function TeamOverview() {
 
     return (
         <ViewContent>
+            <View style={styles.pageHeader}>
+                <AppText variant="headlineMedium">Teams</AppText>
+                <AppText variant="bodyLarge">
+                    Manage the teams available inside the selected organization.
+                </AppText>
+            </View>
             <AppButton style={[styles.addTeamButton]} mode={"elevated"} onPress={handleOpenModal}> + Add Team </AppButton>
             <TeamList data={teams}/>
             <StyledModal isOpen={showModal} onDismiss={handleOpenModal} contentContainerStyle={styles.modal}>
@@ -99,8 +105,13 @@ export default function TeamOverview() {
 
 
 const styles = StyleSheet.create({
+    pageHeader: {
+        gap: 8,
+        marginBottom: 20,
+    },
     addTeamButton: {
-        alignSelf: "flex-end"
+        alignSelf: "flex-end",
+        marginBottom: 16,
     },
     formContainer: {
         flex: 0.7,

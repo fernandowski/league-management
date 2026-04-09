@@ -4,6 +4,7 @@ import {useLocalSearchParams, useRouter} from "expo-router";
 import ViewContent from "@/components/Layout/ViewContent";
 import {useEffect, useState} from "react";
 import LeagueDetails from "@/components/League/LeagueDetails";
+import { AppText } from "@/components/ui/AppText";
 
 export default function Index() {
     const router = useRouter();
@@ -31,6 +32,12 @@ export default function Index() {
     return (
         <ViewContent>
             <View style={{ flex: 1}}>
+                <View style={styles.pageHeader}>
+                    <AppText variant={"headlineMedium"}>League</AppText>
+                    <AppText variant={"bodyLarge"}>
+                        Select a league to manage details, membership, and season activity.
+                    </AppText>
+                </View>
                 <View>
                     <View style={styles.dropdownContainer}>
                         <LeagueDropdown onChange={onLeagueChange} selected={leagueId}/>
@@ -45,6 +52,10 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
+    pageHeader: {
+        gap: 8,
+        marginBottom: 16,
+    },
     dropdownContainer: {
         flexDirection: "row",
         paddingHorizontal: 16,

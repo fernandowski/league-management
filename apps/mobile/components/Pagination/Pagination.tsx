@@ -23,15 +23,7 @@ const Pagination: React.FC<PaginationProps> = ({
   const theme = useAppTheme();
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.outline,
-        },
-      ]}
-    >
+    <View style={styles.container}>
       <Text style={[styles.info, { color: theme.colors.onSurfaceVariant }]}>
         Showing {from}–{to} of {totalItems} items
       </Text>
@@ -54,13 +46,8 @@ const Pagination: React.FC<PaginationProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderRadius: 18,
+    gap: 16,
   },
   info: {
     fontSize: 14,

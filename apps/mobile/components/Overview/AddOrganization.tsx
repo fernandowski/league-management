@@ -1,14 +1,15 @@
-import {View, StyleSheet} from "react-native";
-import {useState} from "react";
-import ControlledTextInput from "@/components/FormControls/ControlledTextInput";
-import Joi from "joi";
-import {SubmitHandler, useForm} from "react-hook-form";
-import {joiResolver} from "@hookform/resolvers/joi";
-import {apiRequest} from "@/api/api";
-import {useOrganizationStore} from "@/stores/organizationStore";
-import StyledModal from "@/components/StyledModal";
-import { AppButton } from "@/components/ui/AppButton";
-import { AppText } from "@/components/ui/AppText";
+import { useState } from 'react';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import Joi from 'joi';
+import { SubmitHandler, useForm } from 'react-hook-form';
+import { joiResolver } from '@hookform/resolvers/joi';
+
+import { apiRequest } from '@/api/api';
+import ControlledTextInput from '@/components/FormControls/ControlledTextInput';
+import StyledModal from '@/components/StyledModal';
+import { AppButton } from '@/components/ui/AppButton';
+import { AppText } from '@/components/ui/AppText';
+import { useOrganizationStore } from '@/stores/organizationStore';
 
 
 const schema = Joi.object({
@@ -23,8 +24,19 @@ interface CreateOrganizationData {
     name: string
 }
 
+interface AddOrganizationProps {
+    buttonLabel?: string;
+    description?: string;
+    modalTitle?: string;
+    style?: StyleProp<ViewStyle>;
+}
 
-export default function AddOrganization() {
+export default function AddOrganization({
+    buttonLabel = "Add Organization",
+    description,
+    modalTitle = "Create Organization",
+    style,
+}: AddOrganizationProps) {
     const [showModal, setShowModal] = useState<boolean>(false);
     const {fetchOrganizations, setOrganization, organizations} = useOrganizationStore();
     const {control, handleSubmit, reset, formState: {errors, isSubmitting}} = useForm<CreateOrganizationData>(
@@ -57,18 +69,20 @@ export default function AddOrganization() {
     }
 
     return (
-        <View style={[styles.container, organizations.length > 0 && styles.compactContainer]}>
-            <AppText style={styles.description}>
-                {organizations.length > 0
-                    ? "Create another organization to manage a different league group."
-                    : "Create your first organization to start managing leagues, teams, and seasons."}
-            </AppText>
+        <View style={[styles.container, organizations.length > 0 && styles.compactContainer, style]}>
+            {(description !== "" || description === undefined) && (
+                <AppText style={styles.description}>
+                    {description ?? (organizations.length > 0
+                        ? "Create another organization to manage a different league group."
+                        : "Create your first organization to start managing leagues, teams, and seasons.")}
+                </AppText>
+            )}
             <AppButton mode={"contained"} onPress={handleShowModal}>
-                Add Organization
+                {buttonLabel}
             </AppButton>
             <StyledModal isOpen={showModal} onDismiss={handleShowModal} width={"90%"} height={"auto"}>
                 <View style={[styles.formContainer]}>
-                    <AppText variant={"titleMedium"}>Create Organization</AppText>
+                    <AppText variant={"titleMedium"}>{modalTitle}</AppText>
                     <ControlledTextInput label='Name' name={'name'} control={control} error={errors.name?.message}/>
                 </View>
                 <View style={styles.formActionButtons}>

@@ -14,11 +14,6 @@ export function OrganizationTable() {
 
     return (
         <View style={[styles.outerContainer]}>
-            <View style={styles.header}>
-                <AppText variant={"titleMedium"}>Your Organizations</AppText>
-                <AppText variant={"bodyMedium"} style={{color: theme.colors.onSurfaceVariant}}>Select the active organization for the rest of the dashboard.</AppText>
-            </View>
-
             <View style={[styles.viewContainer]}>
                 {organizations.map((organization) =>
                     <AppCard
@@ -51,9 +46,6 @@ export function OrganizationTable() {
 const styles = StyleSheet.create({
     outerContainer: {
         gap: 12,
-    },
-    header: {
-        gap: 4,
     },
     viewContainer: {
         gap: 8,

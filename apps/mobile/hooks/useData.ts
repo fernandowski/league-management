@@ -1,5 +1,5 @@
 import {apiRequest} from "@/api/api";
-import {useState} from "react";
+import {useCallback, useState} from "react";
 
 
 export interface LeagueMembershipResponse {
@@ -73,7 +73,7 @@ export function useData<TResponse>() {
     const [fetching, setFetching] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<TResponse | null>();
-    const fetchData = async (endpoint: string): Promise<TResponse | undefined> => {
+    const fetchData = useCallback(async (endpoint: string): Promise<TResponse | undefined> => {
         setError(null);
         setFetching(true);
         try {
@@ -85,7 +85,7 @@ export function useData<TResponse>() {
             setError(e.message || "Error Fetching data.");
             setFetching(false);
         }
-    }
+    }, []);
 
     return { fetchData, fetching, error, data };
 }

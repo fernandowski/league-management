@@ -13,7 +13,16 @@ const ViewContent = ({ children }: ViewContentProps) => {
 
   return (
     <View style={[styles.outerContainer, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.headerWrap}>
+      <View
+        style={[
+          styles.headerWrap,
+          {
+            backgroundColor: theme.colors.surface,
+            borderBottomColor: theme.colors.outlineVariant,
+            shadowColor: theme.colors.shadow,
+          },
+        ]}
+      >
         <Header />
       </View>
 
@@ -34,7 +43,12 @@ const styles = StyleSheet.create({
   },
   headerWrap: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
   },
   scrollView: {
     flex: 1,
@@ -42,7 +56,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 24,
     paddingBottom: 24,
   },
 });

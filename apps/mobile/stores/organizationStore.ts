@@ -6,6 +6,7 @@ interface OrganizationStore {
     organizations: Organization[];
     organization: string | null,
     loading: boolean;
+    initialized: boolean;
     error: string | null;
     fetchOrganizations: () => void;
     setOrganization: (organizationId: string) => void;
@@ -20,6 +21,7 @@ export const useOrganizationStore = create<OrganizationStore>((set) => ({
     organizations: [],
     organization: null,
     loading: false,
+    initialized: false,
     error: null,
     fetchOrganizations: async () => {
         set({loading: true});
@@ -44,12 +46,13 @@ export const useOrganizationStore = create<OrganizationStore>((set) => ({
                         ? state.organization
                         : nextOrganizations[0]?.id ?? null,
                     loading: false,
+                    initialized: true,
                     error: null,
                 };
             });
 
         } catch (error: any) {
-            set({error: error.message, loading: false});
+            set({error: error.message, loading: false, initialized: true});
         }
     },
     setOrganization:  (organizationId: string) => {

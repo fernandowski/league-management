@@ -33,6 +33,6 @@ export const AppCard = Object.assign(AppCardBase, {
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: 28,
+    borderRadius: 18,
   },
 });
