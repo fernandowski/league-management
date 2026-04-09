@@ -69,15 +69,14 @@ export default Tabs;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
-    gap: 12,
+    gap: 16,
   },
   tabContainer: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderRadius: 24,
-    padding: 8,
-    gap: 8,
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
     alignSelf: 'flex-start',
     flexWrap: 'wrap',
   },
@@ -86,12 +85,12 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   tab: {
-    borderRadius: 18,
-    alignItems: 'flex-start',
+    borderRadius: 10,
+    alignItems: 'center',
   },
   tabText: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
   content: {
     flex: 1,

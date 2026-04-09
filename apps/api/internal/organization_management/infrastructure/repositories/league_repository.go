@@ -37,13 +37,13 @@ func (lr *LeagueRepository) findByIdTx(ctx context.Context, querier interface {
     		leagues.created_at,
     		leagues.updated_at,
     		seasons.id as season_status
-		FROM league_management.leagues
-		LEFT JOIN league_management.seasons
+		FROM league_management.leagues AS leagues
+		LEFT JOIN league_management.seasons AS seasons
 			ON seasons.league_id=leagues.id
 			AND seasons.status IN ('pending', 'planned', 'in_progress', 'paused')
 		WHERE leagues.id=$1`
 	if forUpdate {
-		sql += ` FOR UPDATE`
+		sql += ` FOR UPDATE OF leagues`
 	}
 
 	var id string

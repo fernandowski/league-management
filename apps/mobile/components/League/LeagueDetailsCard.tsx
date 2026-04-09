@@ -1,77 +1,138 @@
 import {View, StyleSheet} from "react-native";
 import React from "react";
 import {LeagueDetailResponse} from "@/hooks/useData";
-import { AppCard } from "@/components/ui/AppCard";
 import { AppText } from "@/components/ui/AppText";
+import { useAppTheme } from "@/theme/theme";
 
 export interface LeagueDetailsCardProps {
     data: LeagueDetailResponse
 }
-const LeagueDetailsCard = (props: LeagueDetailsCardProps) => {
-    return (
-        <AppCard>
-            <AppCard.Title title={"League Info"} titleStyle={{fontWeight: "bold"}}></AppCard.Title>
-            <AppCard.Content>
-                <View style={{flexDirection: "row",  flexWrap: "wrap", gap: 18}}>
-                    <View>
-                        <View style={styles.row}>
-                            <AppText style={styles.label}>League ID: </AppText>
-                            <AppText>{props.data.id}</AppText>
-                        </View>
-                        <View style={styles.row}>
-                            <AppText style={styles.label}>Name: </AppText>
-                            <AppText>{props.data.name}</AppText>
-                        </View>
-                        <View style={styles.row}>
-                            <AppText style={styles.label}>Active Members: </AppText>
-                            <AppText>{props.data.active_members}</AppText>
-                        </View>
-                    </View>
-                    <View style={{width: "100%"}}>
-                        {
-                            props.data.season ?
-                                (
-                                    <View>
-                                        <View style={styles.row}>
-                                            <AppText style={styles.label}>Season ID: </AppText>
-                                            <AppText>{props.data.season.id}</AppText>
-                                        </View>
-                                        <View style={styles.row}>
-                                            <AppText style={styles.label}>Name: </AppText>
-                                            <AppText>{props.data.season.name}</AppText>
-                                        </View>
-                                        <View style={styles.row}>
-                                            <AppText style={styles.label}>Status: </AppText>
-                                            <AppText>{props.data.season.status}</AppText>
-                                        </View>
-                                    </View>
-                                )
-                                    :
-                                    (
-                                        <View>
-                                            <AppText style={styles.messageText}> No Season has been configured. Go to Seasons section to configure one. </AppText>
-                                        </View>
-                                    )
-                        }
 
-                    </View>
+const LeagueDetailsCard = (props: LeagueDetailsCardProps) => {
+    const theme = useAppTheme();
+    const seasonConfigured = Boolean(props.data.season);
+    const seasonStatus = props.data.season ? props.data.season.status : "Not configured";
+
+    return (
+        <View style={styles.content}>
+            <View style={styles.header}>
+                <View style={styles.headerCopy}>
+                    <AppText variant="titleMedium">{props.data.name}</AppText>
+                    <AppText variant="bodySmall" style={{color: theme.colors.onSurfaceVariant}}>
+                        League details
+                    </AppText>
                 </View>
-            </AppCard.Content>
-        </AppCard>
+                <View
+                    style={[
+                        styles.statusPill,
+                        {
+                            backgroundColor: seasonConfigured ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
+                        },
+                    ]}
+                >
+                    <AppText
+                        variant="labelMedium"
+                        style={{color: seasonConfigured ? theme.colors.primary : theme.colors.onSurfaceVariant}}
+                    >
+                        {seasonStatus}
+                    </AppText>
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <AppText variant="labelLarge" style={{color: theme.colors.onSurfaceVariant}}>
+                    League
+                </AppText>
+                <View style={[styles.detailTable, {borderColor: theme.colors.outlineVariant}]}>
+                    <DetailRow label="League ID" value={props.data.id} isFirst />
+                    <DetailRow label="Active members" value={String(props.data.active_members)} />
+                    <DetailRow label="Season" value={props.data.season ? props.data.season.name : "Not configured"} />
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <AppText variant="labelLarge" style={{color: theme.colors.onSurfaceVariant}}>
+                    Current season
+                </AppText>
+                {props.data.season ? (
+                    <View style={[styles.detailTable, {borderColor: theme.colors.outlineVariant}]}>
+                        <DetailRow label="Season ID" value={props.data.season.id} isFirst />
+                        <DetailRow label="Status" value={props.data.season.status} />
+                    </View>
+                ) : (
+                    <AppText variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                        No season is configured yet. Use the Season tab below to create and plan one.
+                    </AppText>
+                )}
+            </View>
+        </View>
     )
 }
+
+function DetailRow({label, value, isFirst}: {label: string; value: string; isFirst?: boolean}) {
+    const theme = useAppTheme();
+
+    return (
+        <View style={[styles.row, {borderTopColor: theme.colors.outlineVariant}, isFirst && styles.firstRow]}>
+            <AppText variant="labelMedium" style={[styles.label, {color: theme.colors.onSurfaceVariant}]}>
+                {label}
+            </AppText>
+            <AppText variant="bodyMedium" style={styles.value}>
+                {value}
+            </AppText>
+        </View>
+    );
+}
+
 export default LeagueDetailsCard;
 
-
 const styles = StyleSheet.create({
+    content: {
+        gap: 16,
+    },
+    header: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "wrap",
+    },
+    headerCopy: {
+        gap: 2,
+        flex: 1,
+        minWidth: 220,
+    },
+    statusPill: {
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    section: {
+        gap: 8,
+    },
+    detailTable: {
+        borderWidth: 1,
+        borderRadius: 14,
+        overflow: "hidden",
+    },
     row: {
-        marginBottom: 8,
+        flexDirection: "row",
+        justifyContent: "space-between",
         alignItems: "flex-start",
+        gap: 16,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderTopWidth: 1,
+    },
+    firstRow: {
+        borderTopWidth: 0,
     },
     label: {
-        fontWeight: "bold",
+        width: 120,
+        paddingTop: 2,
     },
-    messageText: {
-        textAlign: "left"
+    value: {
+        flex: 1,
+        textAlign: "right",
     }
 })

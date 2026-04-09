@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useCallback, useState} from "react";
 import {apiRequest} from "@/api/api";
 
 export interface LeagueSearchParams {
@@ -38,8 +38,9 @@ export function useLeagueData(): {
     const [data, setData] = useState<League[]>([]);
     const [total, setTotal] = useState(0);
 
-    const fetchData = async (params: LeagueSearchParams): Promise<void> => {
+    const fetchData = useCallback(async (params: LeagueSearchParams): Promise<void> => {
         setFetching(true);
+        setError(null);
         try {
             const offsetQuery = `offset=${params.offset}`;
             const limitQuery = `limit=${params.limit}`;
@@ -63,7 +64,7 @@ export function useLeagueData(): {
             setError("Error Fetching leagues");
             setFetching(false);
         }
-    };
+    }, []);
 
     return {fetchData, fetching, error, data, total};
 }

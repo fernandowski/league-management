@@ -1,9 +1,10 @@
 import {View} from "react-native";
-import {Surface} from "react-native-paper";
 import {useEffect} from "react";
 import {SeasonStandings, SeasonStandingsResponse, useData} from "@/hooks/useData";
 import TableList, {ColumnDefinition} from "@/components/TableList/TableList";
 import { AppText } from "@/components/ui/AppText";
+import { AppCard } from "@/components/ui/AppCard";
+import { useAppTheme } from "@/theme/theme";
 
 
 export interface SeasonStandingProps {
@@ -23,6 +24,7 @@ const columns: ColumnDefinition<SeasonStandings>[] = [
 export default function SeasonStanding(props: SeasonStandingProps) {
 
     const {fetchData, data, error, fetching} = useData<SeasonStandingsResponse>();
+    const theme = useAppTheme();
 
 
     useEffect(() => {
@@ -36,11 +38,19 @@ export default function SeasonStanding(props: SeasonStandingProps) {
     }
 
     return (
-        <View>
-            <Surface>
-                {error && <AppText>{error}</AppText>}
-                {data && <TableList data={data.standings} columns={columns}/>}
-            </Surface>
+        <View style={{flex: 1}}>
+            <AppCard style={{borderRadius: 24}}>
+                <AppCard.Content style={{gap: 12}}>
+                    <View style={{gap: 4}}>
+                        <AppText variant="titleMedium">Standings</AppText>
+                        <AppText variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                            Track table position, points, and game totals for the current season.
+                        </AppText>
+                    </View>
+                    {error && <AppText>{error}</AppText>}
+                    {data && <TableList data={data.standings} columns={columns}/>}
+                </AppCard.Content>
+            </AppCard>
         </View>
     )
 }

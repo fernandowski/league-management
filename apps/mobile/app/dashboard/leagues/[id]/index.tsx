@@ -5,14 +5,15 @@ import ViewContent from "@/components/Layout/ViewContent";
 import {useEffect, useState} from "react";
 import LeagueDetails from "@/components/League/LeagueDetails";
 import { AppText } from "@/components/ui/AppText";
+import { useAppTheme } from "@/theme/theme";
 
 export default function Index() {
     const router = useRouter();
+    const theme = useAppTheme();
 
     const {id} = useLocalSearchParams();
     const [leagueId, setLeagueId] = useState<string>(Array.isArray(id) ? id[0] : id || "");
     const [refreshLeagueDetails] = useState(false);
-
 
     const onLeagueChange = (newLeagueId: string) => {
         if (newLeagueId !== leagueId) {
@@ -22,6 +23,7 @@ export default function Index() {
             setLeagueId(newLeagueId);
         }
     }
+
     useEffect(() => {
         const selectedId = Array.isArray(id) ? id[0] : id || "";
         if (selectedId !== leagueId) {
@@ -31,20 +33,21 @@ export default function Index() {
 
     return (
         <ViewContent>
-            <View style={{ flex: 1}}>
+            <View style={styles.container}>
                 <View style={styles.pageHeader}>
-                    <AppText variant={"headlineMedium"}>League</AppText>
-                    <AppText variant={"bodyLarge"}>
+                    <AppText variant={"headlineMedium"}>League workspace</AppText>
+                    <AppText variant={"bodyLarge"} style={{color: theme.colors.onSurfaceVariant}}>
                         Select a league to manage details, membership, and season activity.
                     </AppText>
                 </View>
-                <View>
-                    <View style={styles.dropdownContainer}>
-                        <LeagueDropdown onChange={onLeagueChange} selected={leagueId}/>
-                    </View>
-                </View>
                 <View style={styles.detailsContainer}>
-                    <LeagueDetails  leagueId={leagueId} refresh={refreshLeagueDetails}/>
+                    <LeagueDetails
+                        leagueId={leagueId}
+                        refresh={refreshLeagueDetails}
+                        selector={(
+                            <LeagueDropdown onChange={onLeagueChange} selected={leagueId}/>
+                        )}
+                    />
                 </View>
             </View>
         </ViewContent>
@@ -52,14 +55,12 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        gap: 16,
+    },
     pageHeader: {
         gap: 8,
-        marginBottom: 16,
-    },
-    dropdownContainer: {
-        flexDirection: "row",
-        paddingHorizontal: 16,
-        marginBottom: 16,
     },
     detailsContainer: {
         flex: 1,

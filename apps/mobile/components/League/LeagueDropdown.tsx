@@ -51,6 +51,5 @@ const styles = StyleSheet.create({
     select: {
         flex: 1,
         gap: 8,
-        marginTop: 18
     }
 });

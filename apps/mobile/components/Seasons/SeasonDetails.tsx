@@ -1,4 +1,3 @@
-import {Divider, Surface} from "react-native-paper";
 import {View, StyleSheet, useWindowDimensions} from "react-native";
 import React, {useCallback, useEffect} from "react";
 import {SeasonDetailResponse, useData} from "@/hooks/useData";
@@ -10,12 +9,12 @@ import { AppCard } from "@/components/ui/AppCard";
 import { AppText } from "@/components/ui/AppText";
 import {useAppTheme} from "@/theme/theme";
 
-
 export interface SeasonDetailsProps {
     seasonId: string
     leagueId: string
     onSeasonPlanned: () => void
 }
+
 export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
     const {fetchData, data: seasonDetails} = useData<SeasonDetailResponse>();
     const {postData, result, clearResult} = usePost();
@@ -46,53 +45,98 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
 
     if (!seasonDetails) {
         return (
-            <View>
-                <AppCard>
-                    <AppCard.Title title="Loading..." />
-                </AppCard>
-            </View>
+            <AppCard style={styles.loadingCard}>
+                <AppCard.Content>
+                    <AppText variant="titleMedium">Loading season</AppText>
+                </AppCard.Content>
+            </AppCard>
         );
     }
 
     return (
-        <View>
-            <Surface style={{ padding: 18, flexDirection: isLargeScreen ? "row": "column", backgroundColor: theme.colors.surface, borderRadius: 24}}>
-                <View>{result && (<AppText style={[styles.errorMessage, {color: theme.colors.error}]}>{result}</AppText>)}</View>
-                <Divider/>
-                <View style={{flexGrow: 0.5}}>
-                    <SeasonInformation season={seasonDetails} handleSeasonStart={handleSeasonStart}/>
-                </View>
-                <Divider/>
-                {
-                    seasonDetails.status === 'pending' && (
-                        <View>
+        <View style={styles.container}>
+            {result && (
+                <AppCard style={[styles.messageCard, {backgroundColor: theme.colors.errorContainer, borderColor: theme.colors.error}]}>
+                    <AppCard.Content>
+                        <AppText style={[styles.errorMessage, {color: theme.colors.onErrorContainer}]}>{result}</AppText>
+                    </AppCard.Content>
+                </AppCard>
+            )}
+
+            <View style={[styles.topGrid, !isLargeScreen && styles.topGridStacked]}>
+                <AppCard style={[styles.informationCard, {borderColor: theme.colors.outline}]}>
+                    <AppCard.Content>
+                        <SeasonInformation season={seasonDetails} handleSeasonStart={handleSeasonStart}/>
+                    </AppCard.Content>
+                </AppCard>
+
+                {seasonDetails.status === 'pending' && (
+                    <AppCard style={[styles.actionCard, {borderColor: theme.colors.outline}]}>
+                        <AppCard.Content style={styles.actionCardContent}>
+                            <View style={styles.actionTextGroup}>
+                                <AppText variant="titleMedium" style={{color: theme.colors.onSurface}}>Plan season</AppText>
+                                <AppText variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                                    Generate the round-robin schedule once your league members are finalized.
+                                </AppText>
+                            </View>
                             <View style={styles.planSeasonContainer}>
-                                <AppText style={{color: theme.colors.onSurface}}>Plan Season</AppText>
                                 <AppButton onPress={handlePlanSeason}>Plan Season</AppButton>
                             </View>
-                            <Divider/>
-                        </View>
-                    )
-                }
-                {
-                    ['planned', 'in_progress'].indexOf(seasonDetails.status) > -1
-                    &&
-                    (
-                        <View style={{marginTop: 18, flexGrow: 1}}>
-                            <Matches season={seasonDetails}/>
-                        </View>
-                    )
-                }
-            </Surface>
+                        </AppCard.Content>
+                    </AppCard>
+                )}
+            </View>
+
+            {['planned', 'in_progress'].indexOf(seasonDetails.status) > -1 && (
+                <View style={styles.matchesContainer}>
+                    <Matches season={seasonDetails}/>
+                </View>
+            )}
         </View>
     )
 }
 
 const styles = StyleSheet.create({
+    container: {
+        gap: 16,
+    },
     planSeasonContainer: {
         flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "center",
+    },
+    topGrid: {
+        flexDirection: "row",
+        alignItems: "stretch",
+        gap: 16,
+    },
+    topGridStacked: {
+        flexDirection: "column",
+    },
+    informationCard: {
+        flex: 1.3,
+        borderRadius: 18,
+    },
+    actionCard: {
+        flex: 0.9,
+        borderRadius: 18,
+    },
+    actionCardContent: {
+        flex: 1,
         justifyContent: "space-between",
-        alignItems: "center"
+        gap: 16,
+    },
+    actionTextGroup: {
+        gap: 4,
+    },
+    matchesContainer: {
+        flex: 1,
+    },
+    loadingCard: {
+        borderRadius: 18,
+    },
+    messageCard: {
+        borderRadius: 18,
     },
     errorMessage: {}
 });

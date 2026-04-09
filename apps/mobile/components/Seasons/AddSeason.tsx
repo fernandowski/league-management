@@ -1,9 +1,10 @@
-import {Surface} from "react-native-paper";
 import {StyleSheet, View} from "react-native";
 import AddSeasonModal from "@/components/Seasons/AddSeasonModal";
 import React, {useState} from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppText } from "@/components/ui/AppText";
+import { AppCard } from "@/components/ui/AppCard";
+import { useAppTheme } from "@/theme/theme";
 
 
 export interface AddSeasonProps {
@@ -12,6 +13,7 @@ export interface AddSeasonProps {
 }
 export default function AddSeason(props: AddSeasonProps) {
     const [openModal, setOpenModal] = useState<boolean>(false);
+    const theme = useAppTheme();
 
     const handleSave = () => {
         setOpenModal(false);
@@ -23,29 +25,53 @@ export default function AddSeason(props: AddSeasonProps) {
     }
 
     return (
-        <Surface style={styles.surfaceContainer} elevation={4}>
-            <View style={[styles.buttonContainer]}>
-                <AppText>No Season Configured</AppText>
-                <AppButton mode={'elevated'} onPress={openSeasonModal}>+ Add Season</AppButton>
-            </View>
+        <AppCard style={[styles.surfaceContainer, {borderColor: theme.colors.outline}]}>
+            <AppCard.Content style={styles.content}>
+                <View style={styles.copy}>
+                    <AppText variant="headlineSmall">No season configured</AppText>
+                    <AppText variant="bodyLarge" style={{color: theme.colors.onSurfaceVariant}}>
+                        Create a season to unlock scheduling, standings, and match management for this league.
+                    </AppText>
+                </View>
+                <View style={[styles.actionRow, {backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant}]}>
+                    <View style={styles.actionCopy}>
+                        <AppText variant="titleMedium">Create the first season</AppText>
+                        <AppText variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
+                            Start with a season name, then plan the match schedule once your teams are ready.
+                        </AppText>
+                    </View>
+                    <AppButton mode={'contained'} onPress={openSeasonModal}>Add Season</AppButton>
+                </View>
+            </AppCard.Content>
             <AddSeasonModal onSave={handleSave} onClose={openSeasonModal} open={openModal} leagueId={props.leagueId}/>
-        </Surface>
+        </AppCard>
     )
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    buttonContainer: {
-        marginVertical: 27,
-        alignItems: "center",
-        gap: 8
-    },
     surfaceContainer: {
-        marginTop: 27,
-        gap: 18,
-        height: "80%"
-    }
-
+        borderRadius: 24,
+    },
+    content: {
+        gap: 16,
+        paddingVertical: 8,
+    },
+    copy: {
+        gap: 6,
+    },
+    actionRow: {
+        borderWidth: 1,
+        borderRadius: 20,
+        padding: 16,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "wrap",
+    },
+    actionCopy: {
+        flex: 1,
+        minWidth: 220,
+        gap: 4,
+    },
 })
