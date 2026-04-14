@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backend DDD League"
+  short_description: "Go DDD rules for this repo"
+  default_prompt: "Use $backend-ddd-league to make backend changes in this repository while preserving the apps/api DDD boundaries, invariants, and concurrency rules."
