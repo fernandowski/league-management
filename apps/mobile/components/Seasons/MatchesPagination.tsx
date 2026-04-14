@@ -7,13 +7,15 @@ export interface MatchesPaginationProps {
     currentRound: string
     onPrevious: () => void
     onNext: () => void
+    disablePrevious?: boolean
+    disableNext?: boolean
 }
 export default function MatchesPagination(props: MatchesPaginationProps) {
     return (
         <View style={styles.container}>
-            <IconButton icon="chevron-left" size={20} onPress={props.onPrevious}/>
+            <IconButton icon="chevron-left" size={20} onPress={props.onPrevious} disabled={props.disablePrevious}/>
             <View><AppText style={styles.roundText}>Round {props.currentRound}</AppText></View>
-            <IconButton icon="chevron-right" size={20} onPress={props.onNext}/>
+            <IconButton icon="chevron-right" size={20} onPress={props.onNext} disabled={props.disableNext}/>
         </View>
     )
 }

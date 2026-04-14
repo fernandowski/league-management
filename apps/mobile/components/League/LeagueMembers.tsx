@@ -57,7 +57,7 @@ export default function LeagueMembers(props: LeagueMembersProps) {
                                                 </AppText>
                                             </View>
                                             <View>
-                                                <AppButton mode={'contained-tonal'} style={[styles.button]} onPress={() => props.onRemove(member.id)}>Remove</AppButton>
+                                                <AppButton variant="destructive" style={[styles.button]} onPress={() => props.onRemove(member.id)}>Remove</AppButton>
                                             </View>
                                         </View>
                                     )

@@ -80,7 +80,7 @@ export default function SignUp() {
             secureTextEntry
             error={errors.password?.message}
           />
-          <AppButton mode="contained" style={styles.submitButton} onPress={handleSubmit(onSubmit)}>
+          <AppButton variant="submit" style={styles.submitButton} onPress={handleSubmit(onSubmit)}>
             Sign Up
           </AppButton>
         </AppCard.Content>

@@ -59,8 +59,8 @@ export default function AddLeagueModal(props: AddLeagueModalProps) {
                 </View>
             </View>
             <View style={styles.formActionButtons}>
-                <AppButton onPress={props.onClose}>Close</AppButton>
-                <AppButton onPress={handleSubmit(handleSave)}>Save</AppButton>
+                <AppButton variant="secondary" onPress={props.onClose}>Close</AppButton>
+                <AppButton variant="submit" onPress={handleSubmit(handleSave)}>Save</AppButton>
             </View>
         </StyledModal>
     )

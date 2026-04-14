@@ -77,7 +77,7 @@ export default function AddOrganization({
                         : "Create your first organization to start managing leagues, teams, and seasons.")}
                 </AppText>
             )}
-            <AppButton mode={"contained"} onPress={handleShowModal}>
+            <AppButton variant="submit" onPress={handleShowModal}>
                 {buttonLabel}
             </AppButton>
             <StyledModal isOpen={showModal} onDismiss={handleShowModal} width={"90%"} height={"auto"}>
@@ -86,8 +86,8 @@ export default function AddOrganization({
                     <ControlledTextInput label='Name' name={'name'} control={control} error={errors.name?.message}/>
                 </View>
                 <View style={styles.formActionButtons}>
-                    <AppButton onPress={handleShowModal}>Cancel</AppButton>
-                    <AppButton loading={isSubmitting} onPress={handleSubmit(handleOnSaveOrganization)}>Save</AppButton>
+                    <AppButton variant="secondary" onPress={handleShowModal}>Cancel</AppButton>
+                    <AppButton variant="submit" loading={isSubmitting} onPress={handleSubmit(handleOnSaveOrganization)}>Save</AppButton>
                 </View>
             </StyledModal>
         </View>

@@ -41,7 +41,7 @@ export default function SeasonInformation(props: SeasonInformationProps) {
                             The schedule is planned. Start the season when fixtures should become active.
                         </AppText>
                     </View>
-                    <AppButton onPress={props.handleSeasonStart}>Start Season</AppButton>
+                    <AppButton variant="submit" onPress={props.handleSeasonStart}>Start Season</AppButton>
                 </View>
             )}
         </View>

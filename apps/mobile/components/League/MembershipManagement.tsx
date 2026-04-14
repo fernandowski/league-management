@@ -217,9 +217,9 @@ export default function MembershipManagement(props: MembershipManagementProps) {
                         error={errors.name?.message}
                     />
                     <View style={styles.modalActions}>
-                        <AppButton onPress={handleCloseCreateModal}>Cancel</AppButton>
+                        <AppButton variant="secondary" onPress={handleCloseCreateModal}>Cancel</AppButton>
                         <AppButton
-                            mode="contained"
+                            variant="submit"
                             onPress={handleSubmit(handleCreateTeam)}
                             loading={creatingTeam}
                             disabled={creatingTeam}

@@ -3,11 +3,12 @@ import React, {useCallback, useEffect} from "react";
 import {SeasonDetailResponse, useData} from "@/hooks/useData";
 import SeasonInformation from "@/components/Seasons/SeasonInformation";
 import usePost from "@/hooks/usePost";
-import Matches from "@/components/Seasons/Matches";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
 import { AppText } from "@/components/ui/AppText";
 import {useAppTheme} from "@/theme/theme";
+import SeasonMatchUpManagement from "@/components/Seasons/SeasonMatchUpManagement";
+import SeasonStanding from "@/components/Seasons/SeasonStanding";
 
 export interface SeasonDetailsProps {
     seasonId: string
@@ -21,6 +22,7 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
     const dimensions = useWindowDimensions();
     const isLargeScreen = dimensions.width >= 768;
     const theme = useAppTheme();
+    const showStandings = ['planned', 'in_progress'].indexOf(seasonDetails?.status ?? '') > -1;
 
     const fetchRoundDetails = useCallback(async () => {
         await fetchData(`/v1/leagues/${props.leagueId}/seasons/${props.seasonId}`);
@@ -65,8 +67,17 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
 
             <View style={[styles.topGrid, !isLargeScreen && styles.topGridStacked]}>
                 <AppCard style={[styles.informationCard, {borderColor: theme.colors.outline}]}>
-                    <AppCard.Content>
+                    <AppCard.Content style={styles.informationCardContent}>
                         <SeasonInformation season={seasonDetails} handleSeasonStart={handleSeasonStart}/>
+
+                        {showStandings && (
+                            <View style={[styles.scheduleSection, {borderTopColor: theme.colors.outlineVariant}]}>
+                                <View style={styles.matchesHeader}>
+                                    <AppText variant="titleMedium">Season schedule</AppText>
+                                </View>
+                                <SeasonMatchUpManagement seasonId={props.seasonId} onRoundCompleted={fetchRoundDetails}/>
+                            </View>
+                        )}
                     </AppCard.Content>
                 </AppCard>
 
@@ -80,18 +91,20 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
                                 </AppText>
                             </View>
                             <View style={styles.planSeasonContainer}>
-                                <AppButton onPress={handlePlanSeason}>Plan Season</AppButton>
+                                <AppButton variant="submit" onPress={handlePlanSeason}>Plan Season</AppButton>
                             </View>
                         </AppCard.Content>
                     </AppCard>
                 )}
-            </View>
 
-            {['planned', 'in_progress'].indexOf(seasonDetails.status) > -1 && (
-                <View style={styles.matchesContainer}>
-                    <Matches season={seasonDetails}/>
-                </View>
-            )}
+                {showStandings && (
+                    <SeasonStanding
+                        seasonId={props.seasonId}
+                        style={styles.standingsCard}
+                        contentStyle={styles.standingsCardContent}
+                    />
+                )}
+            </View>
         </View>
     )
 }
@@ -117,9 +130,24 @@ const styles = StyleSheet.create({
         flex: 1.3,
         borderRadius: 18,
     },
+    informationCardContent: {
+        gap: 24,
+    },
     actionCard: {
         flex: 0.9,
         borderRadius: 18,
+    },
+    standingsCard: {
+        flex: 1,
+        minWidth: 0,
+    },
+    standingsCardContent: {
+        flex: 1,
+    },
+    scheduleSection: {
+        borderTopWidth: 1,
+        paddingTop: 24,
+        gap: 8,
     },
     actionCardContent: {
         flex: 1,
@@ -129,8 +157,8 @@ const styles = StyleSheet.create({
     actionTextGroup: {
         gap: 4,
     },
-    matchesContainer: {
-        flex: 1,
+    matchesHeader: {
+        gap: 4,
     },
     loadingCard: {
         borderRadius: 18,

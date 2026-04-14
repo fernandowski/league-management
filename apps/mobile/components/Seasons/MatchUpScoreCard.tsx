@@ -7,6 +7,7 @@ import { useAppTheme } from "@/theme/theme";
 export interface MatchUpScoreCardProps {
     data: MatchScore;
     onPress: (matchScore: MatchScore) => void
+    disabled?: boolean
 }
 
 export default function MatchUpScoreCard(props: MatchUpScoreCardProps) {
@@ -14,9 +15,14 @@ export default function MatchUpScoreCard(props: MatchUpScoreCardProps) {
     const isLargeScreen = dimensions.width >= 768;
     const theme = useAppTheme();
     return (
-        <Surface style={{flex: 1}}>
+        <Surface style={[{flex: 1}, props.disabled && styles.disabledSurface]}>
             <Pressable
-                style={({ pressed }) => [styles.pressable, pressed && {backgroundColor: theme.colors.primaryContainer}]}
+                style={({ pressed }) => [
+                    styles.pressable,
+                    props.disabled && styles.disabledPressable,
+                    !props.disabled && pressed && {backgroundColor: theme.colors.primaryContainer}
+                ]}
+                disabled={props.disabled}
                 onPress={() => props.onPress(props.data)}
             >
                 <View style={[styles.row, styles.center]}>
@@ -43,6 +49,12 @@ export default function MatchUpScoreCard(props: MatchUpScoreCardProps) {
 const styles = StyleSheet.create({
     pressable: {
         paddingVertical: 18,
+    },
+    disabledSurface: {
+        opacity: 0.6,
+    },
+    disabledPressable: {
+        cursor: "default",
     },
     teamContainer: {
         flex: 1,

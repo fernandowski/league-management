@@ -56,8 +56,8 @@ export default function AddSeasonModal(props: AddSeasonModalProps) {
                     <ControlledTextInput  name={'name'} control={control} error={errors.name?.message}/>
                 </View>
                 <View style={{flexDirection: "row", justifyContent: "flex-end"}}>
-                    <AppButton onPress={onClose}>Cancel</AppButton>
-                    <AppButton onPress={handleSubmit(handleSave)}>Save</AppButton>
+                    <AppButton variant="secondary" onPress={onClose}>Cancel</AppButton>
+                    <AppButton variant="submit" onPress={handleSubmit(handleSave)}>Save</AppButton>
                 </View>
             </View>
         </StyledModal>

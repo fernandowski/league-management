@@ -83,7 +83,7 @@ export default function Login() {
             secureTextEntry
             error={errors.password?.message}
           />
-          <AppButton mode="contained" style={styles.submitButton} onPress={handleSubmit(onSubmit)}>
+          <AppButton variant="submit" style={styles.submitButton} onPress={handleSubmit(onSubmit)}>
             Login
           </AppButton>
         </AppCard.Content>

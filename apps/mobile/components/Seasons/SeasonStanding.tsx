@@ -1,4 +1,4 @@
-import {View} from "react-native";
+import {StyleProp, View, ViewStyle} from "react-native";
 import {useEffect} from "react";
 import {SeasonStandings, SeasonStandingsResponse, useData} from "@/hooks/useData";
 import TableList, {ColumnDefinition} from "@/components/TableList/TableList";
@@ -9,6 +9,9 @@ import { useAppTheme } from "@/theme/theme";
 
 export interface SeasonStandingProps {
     seasonId: string
+    style?: StyleProp<ViewStyle>
+    cardStyle?: StyleProp<ViewStyle>
+    contentStyle?: StyleProp<ViewStyle>
 }
 
 const columns: ColumnDefinition<SeasonStandings>[] = [
@@ -34,13 +37,13 @@ export default function SeasonStanding(props: SeasonStandingProps) {
     }, [fetchData, props.seasonId]);
 
     if (fetching) {
-        return <View><AppText>Fetching Details</AppText></View>
+        return <View style={props.style}><AppText>Fetching Details</AppText></View>
     }
 
     return (
-        <View style={{flex: 1}}>
-            <AppCard style={{borderRadius: 24}}>
-                <AppCard.Content style={{gap: 12}}>
+        <View style={[{flex: 1}, props.style]}>
+            <AppCard style={[{borderRadius: 24}, props.cardStyle]}>
+                <AppCard.Content style={[{gap: 12}, props.contentStyle]}>
                     <View style={{gap: 4}}>
                         <AppText variant="titleMedium">Standings</AppText>
                         <AppText variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>

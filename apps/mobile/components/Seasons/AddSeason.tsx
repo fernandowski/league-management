@@ -40,7 +40,7 @@ export default function AddSeason(props: AddSeasonProps) {
                             Start with a season name, then plan the match schedule once your teams are ready.
                         </AppText>
                     </View>
-                    <AppButton mode={'contained'} onPress={openSeasonModal}>Add Season</AppButton>
+                    <AppButton variant="submit" onPress={openSeasonModal}>Add Season</AppButton>
                 </View>
             </AppCard.Content>
             <AddSeasonModal onSave={handleSave} onClose={openSeasonModal} open={openModal} leagueId={props.leagueId}/>
