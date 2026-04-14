@@ -174,6 +174,40 @@ func (ss *SeasonService) ChangeMatchUpScore(orgOwnerID, seasonID string, changeS
 	return nil
 }
 
+func (ss *SeasonService) CompleteCurrentRound(orgOwnerID, seasonID string) error {
+	season, err := ss.seasonRepository.FindByID(seasonID)
+	if err != nil {
+		return err
+	}
+
+	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	if err != nil {
+		return err
+	}
+
+	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
+	if err != nil {
+		return err
+	}
+
+	_, err = domainservices.OrganizationOwnerFromUserId(&orgOwnerID, organization)
+	if err != nil {
+		return err
+	}
+
+	season, err = season.CompleteCurrentRound()
+	if err != nil {
+		return err
+	}
+
+	err = ss.seasonRepository.Save(season)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (ss *SeasonService) SeasonDetails(orgOwnerID, seasonID string) (map[string]interface{}, error) {
 	season, err := ss.seasonRepository.FindByID(seasonID)
 	if err != nil {

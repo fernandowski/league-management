@@ -35,6 +35,7 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 				season_schedules.away_team_id as away_team_id,
 				season_schedules.home_team_score as home_team_score,
 				season_schedules.away_team_score as away_team_score,
+				season_schedules.status as match_status,
 				season_schedules.referee_id as referee_id
 			FROM seasons
 			LEFT JOIN season_schedules ON season_schedules.season_id = seasons.id
@@ -50,13 +51,13 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 
 	var seasonId, seasonName, leagueId, seasonStatus string
 	var version int
-	var matchID, homeTeamID, awayTeamID, refereeID *string
+	var matchID, homeTeamID, awayTeamID, refereeID, matchStatus *string
 	var round, homeTeamScore, awayTeamScore *int
 
 	foundRows := false
 
 	for rows.Next() {
-		if err := rows.Scan(&seasonId, &seasonName, &leagueId, &seasonStatus, &version, &matchID, &round, &homeTeamID, &awayTeamID, &homeTeamScore, &awayTeamScore, &refereeID); err != nil {
+		if err := rows.Scan(&seasonId, &seasonName, &leagueId, &seasonStatus, &version, &matchID, &round, &homeTeamID, &awayTeamID, &homeTeamScore, &awayTeamScore, &matchStatus, &refereeID); err != nil {
 			return nil, err
 		}
 		if matchID != nil {
@@ -72,6 +73,9 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 			newMatch, _ := domain.NewMatch(matchID, homeId, awayId)
 			newMatch.AwayTeamScore = *awayTeamScore
 			newMatch.HomeTeamScore = *homeTeamScore
+			if matchStatus != nil {
+				newMatch.Status = domain.MatchStatus(*matchStatus)
+			}
 			if refereeID != nil {
 				newMatch.RefereeID = *refereeID
 			}
@@ -143,7 +147,7 @@ func (sr *SeasonRepository) Save(season *domain.Season) error {
 
 		if len(season.Rounds) > 0 {
 			matchSQL := `INSERT INTO league_management.season_schedules 
-					 (id, season_id, league_id, round, home_team_id, away_team_id, home_team_score, away_team_score, referee_id) 
+					 (id, season_id, league_id, round, home_team_id, away_team_id, home_team_score, away_team_score, status, referee_id) 
 					 VALUES %s 
 					 ON CONFLICT (id) DO UPDATE 
 					 SET league_id = EXCLUDED.league_id, 
@@ -152,12 +156,13 @@ func (sr *SeasonRepository) Save(season *domain.Season) error {
 						 away_team_id = EXCLUDED.away_team_id, 
 						 home_team_score = EXCLUDED.home_team_score, 
 						 away_team_score = EXCLUDED.away_team_score, 
+						 status = EXCLUDED.status,
 						 referee_id = EXCLUDED.referee_id;`
 			for _, round := range season.Rounds {
 				for _, match := range round.Matches {
 					parametrizedValues := fmt.Sprintf(
-						"($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
-						paramIndex, paramIndex+1, paramIndex+2, paramIndex+3, paramIndex+4, paramIndex+5, paramIndex+6, paramIndex+7, paramIndex+8,
+						"($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+						paramIndex, paramIndex+1, paramIndex+2, paramIndex+3, paramIndex+4, paramIndex+5, paramIndex+6, paramIndex+7, paramIndex+8, paramIndex+9,
 					)
 					values = append(values, parametrizedValues)
 					params = append(
@@ -170,9 +175,10 @@ func (sr *SeasonRepository) Save(season *domain.Season) error {
 						match.GetAwayTeam(),
 						match.HomeTeamScore,
 						match.AwayTeamScore,
+						match.Status,
 						match.RefereeID,
 					)
-					paramIndex += 9
+					paramIndex += 10
 				}
 			}
 

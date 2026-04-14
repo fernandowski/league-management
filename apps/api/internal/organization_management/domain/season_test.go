@@ -235,6 +235,9 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 
 		assert.Equal(t, SeasonStatusInProgress, newSeason.Status)
 		assert.Equal(t, SeasonStatusPlanned, season.Status)
+		for _, match := range newSeason.Rounds[0].Matches {
+			assert.Equal(t, MatchStatusInProgress, match.Status)
+		}
 	})
 
 	t.Run("Change game score to negative number should fail", func(t *testing.T) {
@@ -307,9 +310,11 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 	t.Run("Change game score of team playing against 'Bye' should fail", func(t *testing.T) {
 		testId1 := "test_id_1"
 		match1, _ := NewMatch(&testId1, "one", "bye")
+		match1.Status = MatchStatusInProgress
 
 		testId2 := "test_id_2"
 		match2, _ := NewMatch(&testId2, "one", "two")
+		match2.Status = MatchStatusInProgress
 
 		round := NewRound(1)
 		round.Matches = []Match{match1, match2}
@@ -326,12 +331,41 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("Change game score outside current round should fail", func(t *testing.T) {
+		currentMatchID := "current-match"
+		currentMatch, _ := NewMatch(&currentMatchID, "alpha", "beta")
+		currentMatch.Status = MatchStatusInProgress
+
+		testId1 := "next-round-match"
+		match1, _ := NewMatch(&testId1, "one", "two")
+		match1.Status = MatchStatusScheduled
+
+		round := NewRound(1)
+		round.Matches = []Match{currentMatch}
+
+		nextRound := NewRound(2)
+		nextRound.Matches = []Match{match1}
+
+		season := Season{
+			ID:       "id-1",
+			LeagueId: "league-id-1",
+			Name:     "Test League",
+			Rounds:   []Round{round, nextRound},
+			Status:   SeasonStatusInProgress,
+		}
+
+		_, err := season.ChangeMatchScore(testId1, 1, 1)
+		assert.Error(t, err)
+	})
+
 	t.Run("Change game score should pass", func(t *testing.T) {
 		testId1 := "test_id_2"
 		match1, _ := NewMatch(&testId1, "one", "two")
+		match1.Status = MatchStatusInProgress
 
 		testId2 := "test_id_2"
 		match2, _ := NewMatch(&testId2, "one", "two")
+		match2.Status = MatchStatusInProgress
 
 		round := NewRound(1)
 		round.Matches = []Match{match1, match2}
@@ -365,6 +399,64 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 		assert.Equal(t, 2, currentMatch.AwayTeamScore)
 		assert.Equal(t, 0, previousMatch.HomeTeamScore)
 		assert.Equal(t, 0, previousMatch.AwayTeamScore)
+	})
+
+	t.Run("Complete current round should advance next round", func(t *testing.T) {
+		match1ID := "match-1"
+		match1, _ := NewMatch(&match1ID, "one", "two")
+		match1.Status = MatchStatusInProgress
+
+		match2ID := "match-2"
+		match2, _ := NewMatch(&match2ID, "three", "bye")
+		match2.Status = MatchStatusInProgress
+
+		match3ID := "match-3"
+		match3, _ := NewMatch(&match3ID, "four", "five")
+
+		round1 := NewRound(1)
+		round1.Matches = []Match{match1, match2}
+
+		round2 := NewRound(2)
+		round2.Matches = []Match{match3}
+
+		season := Season{
+			ID:       "id-1",
+			LeagueId: "league-id-1",
+			Name:     "Test League",
+			Rounds:   []Round{round1, round2},
+			Status:   SeasonStatusInProgress,
+		}
+
+		updatedSeason, err := season.CompleteCurrentRound()
+
+		assert.NoError(t, err)
+		assert.Equal(t, MatchStatusFinished, updatedSeason.Rounds[0].Matches[0].Status)
+		assert.Equal(t, MatchStatusFinished, updatedSeason.Rounds[0].Matches[1].Status)
+		assert.Equal(t, MatchStatusInProgress, updatedSeason.Rounds[1].Matches[0].Status)
+		assert.Equal(t, SeasonStatusInProgress, updatedSeason.Status)
+	})
+
+	t.Run("Complete final round should finish season", func(t *testing.T) {
+		match1ID := "match-1"
+		match1, _ := NewMatch(&match1ID, "one", "two")
+		match1.Status = MatchStatusInProgress
+
+		round1 := NewRound(1)
+		round1.Matches = []Match{match1}
+
+		season := Season{
+			ID:       "id-1",
+			LeagueId: "league-id-1",
+			Name:     "Test League",
+			Rounds:   []Round{round1},
+			Status:   SeasonStatusInProgress,
+		}
+
+		updatedSeason, err := season.CompleteCurrentRound()
+
+		assert.NoError(t, err)
+		assert.Equal(t, MatchStatusFinished, updatedSeason.Rounds[0].Matches[0].Status)
+		assert.Equal(t, SeasonStatusFinished, updatedSeason.Status)
 	})
 
 }

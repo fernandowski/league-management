@@ -76,6 +76,9 @@ func (s *Season) Start() (*Season, error) {
 
 	newSeason := s.copy()
 	newSeason.Status = SeasonStatusInProgress
+	for matchIndex := range newSeason.Rounds[0].Matches {
+		newSeason.Rounds[0].Matches[matchIndex].Status = MatchStatusInProgress
+	}
 
 	return newSeason, nil
 }
@@ -91,6 +94,15 @@ func (s *Season) ChangeMatchScore(matchID string, homeScore, awayScore int) (*Se
 	if match == nil {
 		return nil, errors.New("match does not exist")
 	}
+	if roundIndex != newSeason.findCurrentRoundIndex() {
+		return nil, errors.New("cannot change score for match not in current round")
+	}
+	if match.Status == MatchStatusFinished {
+		return nil, errors.New("cannot change score for finished match")
+	}
+	if match.Status == MatchStatusScheduled {
+		match.Status = MatchStatusInProgress
+	}
 
 	changedMatch, err := match.ChangeScore(homeScore, awayScore)
 
@@ -99,6 +111,34 @@ func (s *Season) ChangeMatchScore(matchID string, homeScore, awayScore int) (*Se
 	}
 
 	newSeason.Rounds[roundIndex].Matches[matchIndex] = *changedMatch
+	return newSeason, nil
+}
+
+func (s *Season) CompleteCurrentRound() (*Season, error) {
+	if s.Status != SeasonStatusInProgress {
+		return nil, errors.New("season not in correct status in_progress")
+	}
+
+	newSeason := s.copy()
+	currentRoundIndex := newSeason.findCurrentRoundIndex()
+	if currentRoundIndex == -1 {
+		return nil, errors.New("no current round in progress")
+	}
+
+	for matchIndex := range newSeason.Rounds[currentRoundIndex].Matches {
+		newSeason.Rounds[currentRoundIndex].Matches[matchIndex].Status = MatchStatusFinished
+	}
+
+	nextRoundIndex := currentRoundIndex + 1
+	if nextRoundIndex >= len(newSeason.Rounds) {
+		newSeason.Status = SeasonStatusFinished
+		return newSeason, nil
+	}
+
+	for matchIndex := range newSeason.Rounds[nextRoundIndex].Matches {
+		newSeason.Rounds[nextRoundIndex].Matches[matchIndex].Status = MatchStatusInProgress
+	}
+
 	return newSeason, nil
 }
 
@@ -130,6 +170,26 @@ func (s *Season) findMatch(matchId string) (*Match, int, int) {
 		}
 	}
 	return nil, 0, 0
+}
+
+func (s *Season) findCurrentRoundIndex() int {
+	for roundIndex, round := range s.Rounds {
+		for _, match := range round.Matches {
+			if match.Status == MatchStatusInProgress {
+				return roundIndex
+			}
+		}
+	}
+
+	for roundIndex, round := range s.Rounds {
+		for _, match := range round.Matches {
+			if match.Status != MatchStatusFinished {
+				return roundIndex
+			}
+		}
+	}
+
+	return -1
 }
 
 func generateRoundRobin(leagueMembers []LeagueMembership) [][][]LeagueMembership {

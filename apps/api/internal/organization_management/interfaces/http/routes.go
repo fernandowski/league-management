@@ -46,6 +46,7 @@ func RegisterRoutes(
 	seasonsRouter := router.Party("/seasons", auth)
 	{
 		seasonsRouter.Put("/{season_id}/matches/score", seasonController.ChangeMatchScore)
+		seasonsRouter.Post("/{season_id}/rounds/complete", seasonController.CompleteCurrentRound)
 		seasonsRouter.Get("/{season_id}/matches", seasonController.FetchMatches)
 		seasonsRouter.Get("/{season_id}/standings", seasonController.SeasonStandings)
 	}

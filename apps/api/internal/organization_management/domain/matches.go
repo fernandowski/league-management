@@ -12,9 +12,20 @@ type Match struct {
 	AwayTeamID       string
 	HomeTeamScore    int
 	AwayTeamScore    int
+	Status           MatchStatus
 	AssignedLocation MatchLocation
 	RefereeID        string // New field to track assigned referee
 }
+
+type MatchStatus string
+
+const (
+	MatchStatusScheduled  MatchStatus = "scheduled"
+	MatchStatusInProgress MatchStatus = "in_progress"
+	MatchStatusFinished   MatchStatus = "finished"
+	MatchStatusSuspended  MatchStatus = "suspended"
+	MatchStatusUndefined  MatchStatus = "undefined"
+)
 
 func NewMatch(matchID *string, homeTeamID, awayTeamID string) (Match, error) {
 	if homeTeamID == "" {
@@ -36,6 +47,7 @@ func NewMatch(matchID *string, homeTeamID, awayTeamID string) (Match, error) {
 		AwayTeamID:    awayTeamID,
 		HomeTeamScore: 0,
 		AwayTeamScore: 0,
+		Status:        MatchStatusScheduled,
 	}, nil
 }
 
@@ -65,6 +77,9 @@ func (m *Match) ChangeScore(homeTeamScore, awayTeamScore int) (*Match, error) {
 	log.Print(m)
 	if m.HomeTeamID == "bye" || m.AwayTeamID == "bye" {
 		return nil, errors.New("cannot change score of match for a bye week")
+	}
+	if m.Status != MatchStatusInProgress {
+		return nil, errors.New("cannot change score for match not in current round")
 	}
 
 	newMatch := *m
