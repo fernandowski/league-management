@@ -4,6 +4,22 @@
 This file defines concurrency rules, invariants, and implementation responsibilities.  
 All agents must follow these rules when analyzing or modifying code.
 
+## Project Commands
+
+Use the Nx targets defined in [project.json](/home/fernando/ideaProjects/league-management/apps/api/project.json:1) for API workflows instead of ad hoc docker commands.
+
+- Run migrations up:
+  - `npx nx run api:migrate`
+  - `npx nx run api:migrate-up`
+- Run migrations down:
+  - `npx nx run api:migrate-down`
+- Run API tests:
+  - `npx nx run api:test`
+- Start the API stack:
+  - `npx nx run api:serve`
+
+When database schema changes are added under `apps/api/migrations`, prefer the Nx migration targets above so the command path stays consistent with the repo.
+
 ---
 
 # 🧠 Global Concurrency Principles

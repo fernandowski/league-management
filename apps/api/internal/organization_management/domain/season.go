@@ -7,6 +7,23 @@ import (
 )
 
 type SeasonStatus string
+type SeasonPhase string
+
+type PlayoffRules struct {
+	QualificationType      string
+	QualifierCount         int
+	ReseedEachRound        bool
+	ThirdPlaceMatch        bool
+	AllowAdminSeedOverride bool
+	Rounds                 []PlayoffRoundRule
+}
+
+type PlayoffRoundRule struct {
+	Name                     string
+	Legs                     int
+	HigherSeedHostsSecondLeg bool
+	TiedAggregateResolution  string
+}
 
 const (
 	SeasonStatusPending    SeasonStatus = "pending"
@@ -17,14 +34,23 @@ const (
 	SeasonStatusUndefined  SeasonStatus = "undefined"
 )
 
+const (
+	SeasonPhaseRegularSeason SeasonPhase = "regular_season"
+	SeasonPhasePlayoffs      SeasonPhase = "playoffs"
+	SeasonPhaseCompleted     SeasonPhase = "completed"
+)
+
 type Season struct {
 	ID             string
 	LeagueId       string
 	Name           string
 	Status         SeasonStatus
+	Phase          SeasonPhase
 	Version        int
 	Rounds         []Round
 	MatchLocations []MatchLocation
+	PlayoffRules   *PlayoffRules
+	ChampionTeamID *string
 }
 
 func NewSeason(name, leagueID string) (*Season, error) {
@@ -36,7 +62,14 @@ func NewSeason(name, leagueID string) (*Season, error) {
 		return nil, errors.New("name cannot be empty")
 	}
 
-	return &Season{ID: uuid.New().String(), Name: name, LeagueId: leagueID, Status: SeasonStatusPending, Version: 0}, nil
+	return &Season{
+		ID:       uuid.New().String(),
+		Name:     name,
+		LeagueId: leagueID,
+		Status:   SeasonStatusPending,
+		Phase:    SeasonPhaseRegularSeason,
+		Version:  0,
+	}, nil
 }
 
 func (s *Season) ScheduleRounds(league League) error {
@@ -157,8 +190,74 @@ func (s *Season) copy() *Season {
 
 	newSeason.Rounds = newRounds
 	newSeason.Version = s.Version
+	newSeason.PlayoffRules = s.copyPlayoffRules()
 
 	return &newSeason
+}
+
+func (s *Season) ConfigurePlayoffRules(rules PlayoffRules) (*Season, error) {
+	if s.Status == SeasonStatusFinished || s.Phase == SeasonPhasePlayoffs || s.Phase == SeasonPhaseCompleted {
+		return nil, errors.New("cannot configure playoff rules after playoffs have started")
+	}
+
+	if err := rules.Validate(); err != nil {
+		return nil, err
+	}
+
+	newSeason := s.copy()
+	newSeason.PlayoffRules = &rules
+	return newSeason, nil
+}
+
+func (s *Season) copyPlayoffRules() *PlayoffRules {
+	if s.PlayoffRules == nil {
+		return nil
+	}
+
+	copiedRounds := make([]PlayoffRoundRule, len(s.PlayoffRules.Rounds))
+	copy(copiedRounds, s.PlayoffRules.Rounds)
+
+	copiedRules := *s.PlayoffRules
+	copiedRules.Rounds = copiedRounds
+
+	return &copiedRules
+}
+
+func (r PlayoffRules) Validate() error {
+	if strings.TrimSpace(r.QualificationType) == "" {
+		return errors.New("qualification type is required")
+	}
+	if r.QualificationType != "top_n" {
+		return errors.New("unsupported qualification type")
+	}
+	if r.QualifierCount < 2 {
+		return errors.New("qualifier count must be at least 2")
+	}
+	if len(r.Rounds) == 0 {
+		return errors.New("at least one playoff round is required")
+	}
+
+	for _, round := range r.Rounds {
+		if err := round.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r PlayoffRoundRule) Validate() error {
+	if strings.TrimSpace(r.Name) == "" {
+		return errors.New("round name is required")
+	}
+	if r.Legs < 1 || r.Legs > 2 {
+		return errors.New("round legs must be 1 or 2")
+	}
+	if strings.TrimSpace(r.TiedAggregateResolution) == "" {
+		return errors.New("tied aggregate resolution is required")
+	}
+
+	return nil
 }
 
 func (s *Season) findMatch(matchId string) (*Match, int, int) {

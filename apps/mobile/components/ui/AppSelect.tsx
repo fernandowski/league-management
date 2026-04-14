@@ -17,6 +17,7 @@ interface AppSelectProps {
   label?: string;
   placeholder?: string;
   maxWidth?: number;
+  disabled?: boolean;
   onValueChange: (value: string) => void;
 }
 
@@ -26,6 +27,7 @@ export function AppSelect({
   label,
   placeholder,
   maxWidth = 320,
+  disabled = false,
   onValueChange,
 }: AppSelectProps) {
   const [visible, setVisible] = useState(false);
@@ -60,16 +62,20 @@ export function AppSelect({
         anchor={
           <Pressable
             accessibilityRole="button"
-            onPress={() => setVisible((currentValue) => !currentValue)}
+            onPress={() => {
+              if (!disabled) {
+                setVisible((currentValue) => !currentValue);
+              }
+            }}
             style={({ pressed }) => [
               styles.shell,
               {
-                backgroundColor: theme.colors.surface,
+                backgroundColor: disabled ? theme.colors.surfaceVariant : theme.colors.surface,
                 borderColor: visible ? theme.colors.primary : theme.colors.outline,
                 shadowColor: theme.colors.shadow,
                 maxWidth,
               },
-              pressed && { backgroundColor: theme.colors.surfaceVariant },
+              pressed && !disabled && { backgroundColor: theme.colors.surfaceVariant },
             ]}
           >
             <AppText numberOfLines={1} style={[styles.value, { color: theme.colors.onSurface }]}>

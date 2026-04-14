@@ -36,7 +36,31 @@ export interface SeasonDetailResponse {
     id: string,
     name: string
     status: string
+    phase?: string
+    champion_team_id?: string | null
     rounds: Round[]
+}
+
+export interface PlayoffRoundRuleResponse {
+    name: string
+    legs: number
+    higher_seed_hosts_second_leg: boolean
+    tied_aggregate_resolution: string
+}
+
+export interface PlayoffRulesResponse {
+    season_id: string
+    season_status: string
+    season_phase: string
+    configured: boolean
+    rules: {
+        qualification_type: string
+        qualifier_count: number
+        reseed_each_round: boolean
+        third_place_match: boolean
+        allow_admin_seed_override: boolean
+        rounds: PlayoffRoundRuleResponse[]
+    } | null
 }
 
 export interface SeasonStandings {

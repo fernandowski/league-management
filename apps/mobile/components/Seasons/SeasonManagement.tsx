@@ -2,6 +2,7 @@ import {View} from "react-native";
 import Tabs from "@/components/Layout/Tabs";
 import SeasonStanding from "@/components/Seasons/SeasonStanding";
 import SeasonMatchUpManagement from "@/components/Seasons/SeasonMatchUpManagement";
+import SeasonPlayoffs from "@/components/Seasons/SeasonPlayoffs";
 
 
 export interface SeasonManagementProps {
@@ -14,7 +15,8 @@ export default function SeasonManagement(props: SeasonManagementProps) {
             <View>
                 <Tabs tabs={[
                     {key: 'standing', title: 'Standings', view: <SeasonStanding seasonId={props.seasonId}/>},
-                    {key: 'match-ups', title: 'Match Ups', view: <SeasonMatchUpManagement seasonId={props.seasonId}/>}
+                    {key: 'match-ups', title: 'Match Ups', view: <SeasonMatchUpManagement seasonId={props.seasonId}/>},
+                    {key: 'playoffs', title: 'Playoffs', view: <SeasonPlayoffs seasonId={props.seasonId}/>}
                 ]}
                 />
             </View>

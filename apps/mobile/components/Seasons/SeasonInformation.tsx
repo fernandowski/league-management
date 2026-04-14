@@ -11,6 +11,7 @@ export interface SeasonInformationProps {
 export default function SeasonInformation(props: SeasonInformationProps) {
     const theme = useAppTheme();
     const roundCount = props.season.rounds.length;
+    const seasonPhase = props.season.phase ? formatStatus(props.season.phase) : "Regular Season";
 
     return (
         <View style={styles.surfaceCard}>
@@ -30,8 +31,20 @@ export default function SeasonInformation(props: SeasonInformationProps) {
 
             <View style={styles.metricsRow}>
                 <MetricCard label="Status" value={formatStatus(props.season.status)} />
+                <MetricCard label="Phase" value={seasonPhase} />
                 <MetricCard label="Rounds" value={String(roundCount)} />
             </View>
+
+            {props.season.champion_team_id && (
+                <View style={[styles.actionPanel, {backgroundColor: theme.colors.primaryContainer, borderColor: theme.colors.primary}]}>
+                    <View style={styles.actionCopy}>
+                        <AppText variant="titleMedium" style={{color: theme.colors.primary}}>Champion Recorded</AppText>
+                        <AppText variant="bodyMedium" style={{color: theme.colors.onPrimaryContainer}}>
+                            This season already has a champion assigned.
+                        </AppText>
+                    </View>
+                </View>
+            )}
 
             {['planned'].indexOf(props.season.status) > -1 && (
                 <View style={[styles.actionPanel, {backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant}]}>

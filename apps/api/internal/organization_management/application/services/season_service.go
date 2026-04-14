@@ -300,3 +300,101 @@ func (ss *SeasonService) SeasonMatchUps(orgOwnerID, seasonID string) ([]interfac
 
 	return result, nil
 }
+
+func (ss *SeasonService) ConfigurePlayoffRules(orgOwnerID, seasonID string, dto dtos.ConfigurePlayoffRulesDTO) error {
+	season, err := ss.seasonRepository.FindByID(seasonID)
+	if err != nil {
+		return err
+	}
+
+	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	if err != nil {
+		return err
+	}
+
+	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
+	if err != nil {
+		return err
+	}
+
+	if !organization.BelongsToOwner(orgOwnerID) {
+		return errors.New("only org owner can configure playoff rules")
+	}
+
+	rules := domain.PlayoffRules{
+		QualificationType:      dto.QualificationType,
+		QualifierCount:         dto.QualifierCount,
+		ReseedEachRound:        dto.ReseedEachRound,
+		ThirdPlaceMatch:        dto.ThirdPlaceMatch,
+		AllowAdminSeedOverride: dto.AllowAdminSeedOverride,
+		Rounds:                 make([]domain.PlayoffRoundRule, 0, len(dto.Rounds)),
+	}
+
+	for _, round := range dto.Rounds {
+		rules.Rounds = append(rules.Rounds, domain.PlayoffRoundRule{
+			Name:                     round.Name,
+			Legs:                     round.Legs,
+			HigherSeedHostsSecondLeg: round.HigherSeedHostsSecondLeg,
+			TiedAggregateResolution:  round.TiedAggregateResolution,
+		})
+	}
+
+	updatedSeason, err := season.ConfigurePlayoffRules(rules)
+	if err != nil {
+		return err
+	}
+
+	return ss.seasonRepository.Save(updatedSeason)
+}
+
+func (ss *SeasonService) PlayoffRules(orgOwnerID, seasonID string) (map[string]interface{}, error) {
+	season, err := ss.seasonRepository.FindByID(seasonID)
+	if err != nil {
+		return nil, err
+	}
+
+	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	if err != nil {
+		return nil, err
+	}
+
+	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
+	if err != nil {
+		return nil, err
+	}
+
+	if !organization.BelongsToOwner(orgOwnerID) {
+		return nil, errors.New("only org owner can view playoff rules")
+	}
+
+	result := map[string]interface{}{
+		"season_id":     season.ID,
+		"season_status": season.Status,
+		"season_phase":  season.Phase,
+		"configured":    season.PlayoffRules != nil,
+		"rules":         nil,
+	}
+
+	if season.PlayoffRules != nil {
+		rounds := make([]map[string]interface{}, 0, len(season.PlayoffRules.Rounds))
+		for _, round := range season.PlayoffRules.Rounds {
+			rounds = append(rounds, map[string]interface{}{
+				"name":                         round.Name,
+				"legs":                         round.Legs,
+				"higher_seed_hosts_second_leg": round.HigherSeedHostsSecondLeg,
+				"tied_aggregate_resolution":    round.TiedAggregateResolution,
+			})
+		}
+
+		result["rules"] = map[string]interface{}{
+			"qualification_type":        season.PlayoffRules.QualificationType,
+			"qualifier_count":           season.PlayoffRules.QualifierCount,
+			"reseed_each_round":         season.PlayoffRules.ReseedEachRound,
+			"third_place_match":         season.PlayoffRules.ThirdPlaceMatch,
+			"allow_admin_seed_override": season.PlayoffRules.AllowAdminSeedOverride,
+			"rounds":                    rounds,
+		}
+	}
+
+	return result, nil
+}

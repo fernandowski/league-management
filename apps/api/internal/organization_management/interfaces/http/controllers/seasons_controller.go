@@ -298,3 +298,63 @@ func (sc *SeasonController) FetchMatches(ctx iris.Context) {
 
 	ctx.JSON(result)
 }
+
+func (sc *SeasonController) ConfigurePlayoffRules(ctx iris.Context) {
+	var body dtos.ConfigurePlayoffRulesDTO
+
+	if err := ctx.ReadJSON(&body); err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	seasonId := ctx.Params().GetDefault("season_id", "").(string)
+	if seasonId == "" {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "missing season_id"})
+		return
+	}
+
+	value := ctx.Values().Get("user")
+	authenticatedUser, ok := value.(*domain2.User)
+	if !ok {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "No Authentication"})
+		return
+	}
+
+	err := sc.seasonService.ConfigurePlayoffRules(authenticatedUser.Id, seasonId, body)
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(iris.Map{"status": "ok"})
+}
+
+func (sc *SeasonController) PlayoffRules(ctx iris.Context) {
+	seasonId := ctx.Params().GetDefault("season_id", "").(string)
+	if seasonId == "" {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "missing season_id"})
+		return
+	}
+
+	value := ctx.Values().Get("user")
+	authenticatedUser, ok := value.(*domain2.User)
+	if !ok {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": "No Authentication"})
+		return
+	}
+
+	result, err := sc.seasonService.PlayoffRules(authenticatedUser.Id, seasonId)
+	if err != nil {
+		ctx.StatusCode(iris.StatusBadRequest)
+		ctx.JSON(iris.Map{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(result)
+}
