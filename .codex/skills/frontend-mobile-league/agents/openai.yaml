@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Mobile League"
+  short_description: "Mobile UI patterns for this repo"
+  default_prompt: "Use $frontend-mobile-league to update the mobile frontend in this repository with existing components, responsive layout patterns, and semantic shared UI APIs."
