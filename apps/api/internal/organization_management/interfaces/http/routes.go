@@ -51,6 +51,10 @@ func RegisterRoutes(
 		seasonsRouter.Get("/{season_id}/standings", seasonController.SeasonStandings)
 		seasonsRouter.Get("/{season_id}/playoffs/rules", seasonController.PlayoffRules)
 		seasonsRouter.Put("/{season_id}/playoffs/rules", seasonController.ConfigurePlayoffRules)
+		seasonsRouter.Get("/{season_id}/playoffs/qualification-preview", seasonController.PlayoffQualificationPreview)
+		seasonsRouter.Post("/{season_id}/playoffs/bracket/generate", seasonController.GeneratePlayoffBracket)
+		seasonsRouter.Get("/{season_id}/playoffs/bracket", seasonController.PlayoffBracket)
+		seasonsRouter.Put("/{season_id}/playoffs/ties/{tie_id}/matches/{match_id}/score", seasonController.RecordPlayoffMatchScore)
 	}
 
 	_ = refereeController

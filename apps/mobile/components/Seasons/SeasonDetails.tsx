@@ -9,6 +9,7 @@ import { AppText } from "@/components/ui/AppText";
 import {useAppTheme} from "@/theme/theme";
 import SeasonMatchUpManagement from "@/components/Seasons/SeasonMatchUpManagement";
 import SeasonStanding from "@/components/Seasons/SeasonStanding";
+import SeasonPlayoffs from "@/components/Seasons/SeasonPlayoffs";
 
 export interface SeasonDetailsProps {
     seasonId: string
@@ -22,7 +23,8 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
     const dimensions = useWindowDimensions();
     const isLargeScreen = dimensions.width >= 768;
     const theme = useAppTheme();
-    const showStandings = ['planned', 'in_progress'].indexOf(seasonDetails?.status ?? '') > -1;
+    const showStandings = ['planned', 'in_progress', 'finished'].indexOf(seasonDetails?.status ?? '') > -1;
+    const showPlayoffs = seasonDetails?.phase !== 'completed';
 
     const fetchRoundDetails = useCallback(async () => {
         await fetchData(`/v1/leagues/${props.leagueId}/seasons/${props.seasonId}`);
@@ -75,7 +77,11 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
                                 <View style={styles.matchesHeader}>
                                     <AppText variant="titleMedium">Season schedule</AppText>
                                 </View>
-                                <SeasonMatchUpManagement seasonId={props.seasonId} onRoundCompleted={fetchRoundDetails}/>
+                                <SeasonMatchUpManagement
+                                    seasonId={props.seasonId}
+                                    seasonStatus={seasonDetails.status}
+                                    onRoundCompleted={fetchRoundDetails}
+                                />
                             </View>
                         )}
                     </AppCard.Content>
@@ -105,6 +111,10 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
                     />
                 )}
             </View>
+
+            {showPlayoffs && (
+                <SeasonPlayoffs seasonId={props.seasonId}/>
+            )}
         </View>
     )
 }

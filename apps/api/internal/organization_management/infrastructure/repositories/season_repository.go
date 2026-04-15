@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"league-management/internal/organization_management/domain"
@@ -120,6 +121,11 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 		return nil, err
 	}
 	season.PlayoffRules = playoffRules
+	playoffBracket, err := sr.findPlayoffBracket(seasonID)
+	if err != nil {
+		return nil, err
+	}
+	season.PlayoffBracket = playoffBracket
 
 	return &season, nil
 }
@@ -153,6 +159,9 @@ func (sr *SeasonRepository) Save(season *domain.Season) error {
 		}
 
 		if err := sr.savePlayoffRules(tx, season); err != nil {
+			return err
+		}
+		if err := sr.savePlayoffBracket(tx, season); err != nil {
 			return err
 		}
 
@@ -316,6 +325,191 @@ func (sr *SeasonRepository) savePlayoffRules(tx pgx.Tx, season *domain.Season) e
 	}
 
 	return nil
+}
+
+func (sr *SeasonRepository) findPlayoffBracket(seasonID string) (*domain.PlayoffBracket, error) {
+	connection := database.GetConnection()
+
+	var bracketID string
+	err := connection.QueryRow(context.Background(), `SELECT id FROM league_management.season_playoff_brackets WHERE season_id=$1`, seasonID).Scan(&bracketID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	rows, err := connection.Query(context.Background(), `SELECT id, round_name, round_order, slot_order, home_seed, away_seed, home_team_id, away_team_id, status, winner_team_id
+		FROM league_management.season_playoff_ties
+		WHERE playoff_bracket_id=$1
+		ORDER BY round_order ASC, slot_order ASC`, bracketID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	bracket := &domain.PlayoffBracket{Rounds: []domain.PlayoffBracketRound{}}
+	roundMap := map[int]int{}
+
+	for rows.Next() {
+		var tie domain.PlayoffTie
+		var homeSeed, awaySeed *int
+		var homeTeamID, awayTeamID, winnerTeamID *string
+		if err := rows.Scan(&tie.ID, &tie.RoundName, &tie.RoundOrder, &tie.SlotOrder, &homeSeed, &awaySeed, &homeTeamID, &awayTeamID, &tie.Status, &winnerTeamID); err != nil {
+			return nil, err
+		}
+		if homeSeed != nil {
+			tie.HomeSeed = *homeSeed
+		}
+		if awaySeed != nil {
+			tie.AwaySeed = *awaySeed
+		}
+		if homeTeamID != nil {
+			tie.HomeTeamID = *homeTeamID
+		}
+		if awayTeamID != nil {
+			tie.AwayTeamID = *awayTeamID
+		}
+		if winnerTeamID != nil {
+			tie.WinnerTeamID = winnerTeamID
+		}
+		matches, err := sr.findPlayoffMatches(tie.ID)
+		if err != nil {
+			return nil, err
+		}
+		tie.Matches = matches
+
+		index, exists := roundMap[tie.RoundOrder]
+		if !exists {
+			bracket.Rounds = append(bracket.Rounds, domain.PlayoffBracketRound{
+				Name:  tie.RoundName,
+				Order: tie.RoundOrder,
+				Ties:  []domain.PlayoffTie{},
+			})
+			index = len(bracket.Rounds) - 1
+			roundMap[tie.RoundOrder] = index
+		}
+		bracket.Rounds[index].Ties = append(bracket.Rounds[index].Ties, tie)
+	}
+
+	return bracket, nil
+}
+
+func (sr *SeasonRepository) savePlayoffBracket(tx pgx.Tx, season *domain.Season) error {
+	if season.PlayoffBracket == nil {
+		return nil
+	}
+
+	var bracketID string
+	err := tx.QueryRow(context.Background(), `SELECT id FROM league_management.season_playoff_brackets WHERE season_id=$1`, season.ID).Scan(&bracketID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			bracketID = uuid.New().String()
+			_, err = tx.Exec(context.Background(), `INSERT INTO league_management.season_playoff_brackets (id, season_id, status) VALUES ($1, $2, $3)`, bracketID, season.ID, "generated")
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	_, err = tx.Exec(context.Background(), `DELETE FROM league_management.season_playoff_ties WHERE playoff_bracket_id=$1`, bracketID)
+	if err != nil {
+		return err
+	}
+
+	for _, round := range season.PlayoffBracket.Rounds {
+		for _, tie := range round.Ties {
+			var homeSeed interface{}
+			var awaySeed interface{}
+			var homeTeamID interface{}
+			var awayTeamID interface{}
+			if tie.HomeSeed > 0 {
+				homeSeed = tie.HomeSeed
+			}
+			if tie.AwaySeed > 0 {
+				awaySeed = tie.AwaySeed
+			}
+			if tie.HomeTeamID != "" {
+				homeTeamID = tie.HomeTeamID
+			}
+			if tie.AwayTeamID != "" {
+				awayTeamID = tie.AwayTeamID
+			}
+
+			var winnerTeamID interface{}
+			if tie.WinnerTeamID != nil {
+				winnerTeamID = *tie.WinnerTeamID
+			}
+
+			_, err = tx.Exec(context.Background(), `INSERT INTO league_management.season_playoff_ties
+				(id, playoff_bracket_id, round_name, round_order, slot_order, home_seed, away_seed, home_team_id, away_team_id, status, winner_team_id)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+				tie.ID, bracketID, tie.RoundName, tie.RoundOrder, tie.SlotOrder, homeSeed, awaySeed, homeTeamID, awayTeamID, tie.Status, winnerTeamID,
+			)
+			if err != nil {
+				return err
+			}
+
+			for _, match := range tie.Matches {
+				var matchHomeTeamID interface{}
+				var matchAwayTeamID interface{}
+				if match.HomeTeamID != "" {
+					matchHomeTeamID = match.HomeTeamID
+				}
+				if match.AwayTeamID != "" {
+					matchAwayTeamID = match.AwayTeamID
+				}
+
+				_, err = tx.Exec(context.Background(), `INSERT INTO league_management.season_playoff_matches
+					(id, playoff_tie_id, match_order, home_team_id, away_team_id, home_score, away_score, status)
+					VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+					match.ID, tie.ID, match.MatchOrder, matchHomeTeamID, matchAwayTeamID, match.HomeTeamScore, match.AwayTeamScore, match.Status,
+				)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (sr *SeasonRepository) findPlayoffMatches(tieID string) ([]domain.Match, error) {
+	connection := database.GetConnection()
+
+	rows, err := connection.Query(context.Background(), `SELECT id, match_order, home_team_id, away_team_id, home_score, away_score, status
+		FROM league_management.season_playoff_matches
+		WHERE playoff_tie_id=$1
+		ORDER BY match_order ASC`, tieID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return []domain.Match{}, nil
+		}
+		return nil, err
+	}
+	defer rows.Close()
+
+	matches := []domain.Match{}
+	for rows.Next() {
+		var match domain.Match
+		var homeTeamID, awayTeamID *string
+		if err := rows.Scan(&match.ID, &match.MatchOrder, &homeTeamID, &awayTeamID, &match.HomeTeamScore, &match.AwayTeamScore, &match.Status); err != nil {
+			return nil, err
+		}
+		match.PlayoffTieID = tieID
+		if homeTeamID != nil {
+			match.HomeTeamID = *homeTeamID
+		}
+		if awayTeamID != nil {
+			match.AwayTeamID = *awayTeamID
+		}
+		matches = append(matches, match)
+	}
+
+	return matches, nil
 }
 
 func (sr *SeasonRepository) Search(orgOwnerID, leagueID string, searchDTO dtos.SearchSeasonDTO) ([]interface{}, int) {
@@ -635,4 +829,153 @@ func (sr *SeasonRepository) FetchSeasonMatchUps(seasonID string) ([]interface{},
 	}
 
 	return result, nil
+}
+
+func (sr *SeasonRepository) FetchPlayoffBracket(seasonID string) (map[string]interface{}, error) {
+	connection := database.GetConnection()
+
+	var bracketID string
+	err := connection.QueryRow(context.Background(), `SELECT id FROM league_management.season_playoff_brackets WHERE season_id=$1`, seasonID).Scan(&bracketID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return map[string]interface{}{
+				"season_id": seasonID,
+				"generated": false,
+				"rounds":    []interface{}{},
+			}, nil
+		}
+		return nil, err
+	}
+
+	rows, err := connection.Query(context.Background(), `
+		SELECT
+			ties.id,
+			ties.round_name,
+			ties.round_order,
+			ties.slot_order,
+			ties.home_seed,
+			ties.away_seed,
+			ties.status,
+			ties.winner_team_id,
+			home_team.id,
+			COALESCE(home_team.name, 'TBD'),
+			away_team.id,
+			COALESCE(away_team.name, 'TBD')
+		FROM league_management.season_playoff_ties AS ties
+		LEFT JOIN league_management.teams AS home_team ON home_team.id = ties.home_team_id
+		LEFT JOIN league_management.teams AS away_team ON away_team.id = ties.away_team_id
+		WHERE ties.playoff_bracket_id=$1
+		ORDER BY ties.round_order ASC, ties.slot_order ASC`, bracketID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type roundEntry struct {
+		name  string
+		order int
+		ties  []interface{}
+	}
+
+	roundMap := map[int]*roundEntry{}
+	roundOrder := []int{}
+
+	for rows.Next() {
+		var tieID, roundName, status string
+		var roundNumber, slotOrder int
+		var homeSeed, awaySeed *int
+		var winnerTeamID, homeTeamID, homeTeamName, awayTeamID, awayTeamName *string
+		if err := rows.Scan(&tieID, &roundName, &roundNumber, &slotOrder, &homeSeed, &awaySeed, &status, &winnerTeamID, &homeTeamID, &homeTeamName, &awayTeamID, &awayTeamName); err != nil {
+			return nil, err
+		}
+
+		entry, exists := roundMap[roundNumber]
+		if !exists {
+			entry = &roundEntry{name: roundName, order: roundNumber, ties: []interface{}{}}
+			roundMap[roundNumber] = entry
+			roundOrder = append(roundOrder, roundNumber)
+		}
+
+		tie := map[string]interface{}{
+			"id":         tieID,
+			"slot_order": slotOrder,
+			"status":     status,
+			"home_seed":  homeSeed,
+			"away_seed":  awaySeed,
+			"home_team": map[string]interface{}{
+				"id":   homeTeamID,
+				"name": valueOrFallback(homeTeamName, "TBD"),
+			},
+			"away_team": map[string]interface{}{
+				"id":   awayTeamID,
+				"name": valueOrFallback(awayTeamName, "TBD"),
+			},
+			"winner_team_id": winnerTeamID,
+			"matches":        []interface{}{},
+		}
+
+		matchRows, err := connection.Query(context.Background(), `
+			SELECT
+				legs.id,
+				legs.match_order,
+				legs.home_score,
+				legs.away_score,
+				legs.status,
+				COALESCE(home_team.name, 'TBD'),
+				COALESCE(away_team.name, 'TBD')
+			FROM league_management.season_playoff_matches AS legs
+			LEFT JOIN league_management.teams AS home_team ON home_team.id = legs.home_team_id
+			LEFT JOIN league_management.teams AS away_team ON away_team.id = legs.away_team_id
+			WHERE legs.playoff_tie_id=$1
+			ORDER BY legs.match_order ASC`, tieID)
+		if err != nil {
+			return nil, err
+		}
+
+		matches := []interface{}{}
+		for matchRows.Next() {
+			var matchID, matchStatus, homeTeamName, awayTeamName string
+			var matchOrder, homeScore, awayScore int
+			if err := matchRows.Scan(&matchID, &matchOrder, &homeScore, &awayScore, &matchStatus, &homeTeamName, &awayTeamName); err != nil {
+				matchRows.Close()
+				return nil, err
+			}
+			matches = append(matches, map[string]interface{}{
+				"id":          matchID,
+				"match_order": matchOrder,
+				"home_score":  homeScore,
+				"away_score":  awayScore,
+				"status":      matchStatus,
+				"home_team":   homeTeamName,
+				"away_team":   awayTeamName,
+			})
+		}
+		matchRows.Close()
+		tie["matches"] = matches
+
+		entry.ties = append(entry.ties, tie)
+	}
+
+	resultRounds := []interface{}{}
+	for _, number := range roundOrder {
+		entry := roundMap[number]
+		resultRounds = append(resultRounds, map[string]interface{}{
+			"name":  entry.name,
+			"order": entry.order,
+			"ties":  entry.ties,
+		})
+	}
+
+	return map[string]interface{}{
+		"season_id": seasonID,
+		"generated": true,
+		"rounds":    resultRounds,
+	}, nil
+}
+
+func valueOrFallback(value *string, fallback string) string {
+	if value == nil || *value == "" {
+		return fallback
+	}
+	return *value
 }

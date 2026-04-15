@@ -147,6 +147,10 @@ func (r *fakeSeasonRepo) FetchSeasonMatchUps(string) ([]interface{}, error) {
 	return nil, nil
 }
 
+func (r *fakeSeasonRepo) FetchPlayoffBracket(string) (map[string]interface{}, error) {
+	return nil, nil
+}
+
 type fakeSeasonLeagueRepo struct {
 	league *domain.League
 }
@@ -299,7 +303,7 @@ func TestSeasonService_ChangeMatchScore_ConcurrentUpdatesConflictOnVersion(t *te
 			Status:   domain.SeasonStatusInProgress,
 			Version:  1,
 			Rounds: []domain.Round{
-				{RoundNumber: 1, Matches: []domain.Match{{ID: matchID, HomeTeamID: "team-1", AwayTeamID: "team-2"}}},
+				{RoundNumber: 1, Matches: []domain.Match{{ID: matchID, HomeTeamID: "team-1", AwayTeamID: "team-2", Status: domain.MatchStatusInProgress}}},
 			},
 		},
 		findBarrierTarget: 2,
@@ -354,6 +358,163 @@ func TestSeasonService_ChangeMatchScore_ConcurrentUpdatesConflictOnVersion(t *te
 	}
 }
 
+func TestSeasonService_ConfigurePlayoffRules_FinishedRegularSeasonAllowsOwnerToSave(t *testing.T) {
+	ownerID := "owner-1"
+	orgID := "org-1"
+	leagueID := "league-1"
+	seasonID := "season-1"
+
+	seasonRepo := &fakeSeasonRepo{
+		season: &domain.Season{
+			ID:       seasonID,
+			LeagueId: leagueID,
+			Name:     "Spring",
+			Status:   domain.SeasonStatusFinished,
+			Phase:    domain.SeasonPhaseRegularSeason,
+			Version:  1,
+		},
+	}
+
+	service := &SeasonService{
+		seasonRepository: seasonRepo,
+		leagueRepository: &fakeSeasonLeagueRepo{
+			league: &domain.League{Id: stringPtr(leagueID), OrganizationId: orgID},
+		},
+		organizationRepo: &fakeOrganizationRepo{
+			organizations: map[string]*domain.Organization{
+				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
+			},
+		},
+	}
+
+	err := service.ConfigurePlayoffRules(ownerID, seasonID, dtos.ConfigurePlayoffRulesDTO{
+		QualificationType: "top_n",
+		QualifierCount:    4,
+		Rounds: []dtos.ConfigurePlayoffRoundDTO{
+			{Name: "semifinal", Legs: 2, TiedAggregateResolution: "penalties"},
+			{Name: "final", Legs: 1, TiedAggregateResolution: "penalties"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("expected playoff rules to save for finished regular season, got %v", err)
+	}
+	if seasonRepo.season.PlayoffRules == nil {
+		t.Fatalf("expected playoff rules to be stored on season")
+	}
+	if seasonRepo.season.PlayoffRules.QualifierCount != 4 {
+		t.Fatalf("expected qualifier count 4, got %d", seasonRepo.season.PlayoffRules.QualifierCount)
+	}
+}
+
+func TestSeasonService_ConfigurePlayoffRules_BeforePlayoffMatchPlayedClearsBracket(t *testing.T) {
+	ownerID := "owner-1"
+	orgID := "org-1"
+	leagueID := "league-1"
+	seasonID := "season-1"
+
+	seasonRepo := &fakeSeasonRepo{
+		season: &domain.Season{
+			ID:       seasonID,
+			LeagueId: leagueID,
+			Name:     "Spring",
+			Status:   domain.SeasonStatusInProgress,
+			Phase:    domain.SeasonPhasePlayoffs,
+			Version:  1,
+			PlayoffBracket: &domain.PlayoffBracket{
+				Rounds: []domain.PlayoffBracketRound{
+					{
+						Name:  "semifinal",
+						Order: 1,
+						Ties: []domain.PlayoffTie{
+							{
+								ID:     "tie-1",
+								Status: "ready",
+								Matches: []domain.Match{
+									{ID: "match-1", PlayoffTieID: "tie-1", MatchOrder: 1, HomeTeamID: "team-1", AwayTeamID: "team-4", Status: domain.MatchStatusScheduled},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	service := &SeasonService{
+		seasonRepository: seasonRepo,
+		leagueRepository: &fakeSeasonLeagueRepo{
+			league: &domain.League{Id: stringPtr(leagueID), OrganizationId: orgID},
+		},
+		organizationRepo: &fakeOrganizationRepo{
+			organizations: map[string]*domain.Organization{
+				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
+			},
+		},
+	}
+
+	err := service.ConfigurePlayoffRules(ownerID, seasonID, dtos.ConfigurePlayoffRulesDTO{
+		QualificationType: "top_n",
+		QualifierCount:    2,
+		Rounds: []dtos.ConfigurePlayoffRoundDTO{
+			{Name: "final", Legs: 1, TiedAggregateResolution: "clear_winner_required"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("expected playoff rules to save before playoff matches are played, got %v", err)
+	}
+	if seasonRepo.season.PlayoffBracket != nil {
+		t.Fatalf("expected existing playoff bracket to be cleared after rules change")
+	}
+	if seasonRepo.season.Phase != domain.SeasonPhaseRegularSeason {
+		t.Fatalf("expected season phase to return to regular_season, got %s", seasonRepo.season.Phase)
+	}
+}
+
+func TestSeasonService_ConfigurePlayoffRules_RejectsNonOwner(t *testing.T) {
+	ownerID := "owner-1"
+	otherUserID := "user-2"
+	orgID := "org-1"
+	leagueID := "league-1"
+	seasonID := "season-1"
+
+	seasonRepo := &fakeSeasonRepo{
+		season: &domain.Season{
+			ID:       seasonID,
+			LeagueId: leagueID,
+			Name:     "Spring",
+			Status:   domain.SeasonStatusFinished,
+			Phase:    domain.SeasonPhaseRegularSeason,
+			Version:  1,
+		},
+	}
+
+	service := &SeasonService{
+		seasonRepository: seasonRepo,
+		leagueRepository: &fakeSeasonLeagueRepo{
+			league: &domain.League{Id: stringPtr(leagueID), OrganizationId: orgID},
+		},
+		organizationRepo: &fakeOrganizationRepo{
+			organizations: map[string]*domain.Organization{
+				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
+			},
+		},
+	}
+
+	err := service.ConfigurePlayoffRules(otherUserID, seasonID, dtos.ConfigurePlayoffRulesDTO{
+		QualificationType: "top_n",
+		QualifierCount:    4,
+		Rounds: []dtos.ConfigurePlayoffRoundDTO{
+			{Name: "semifinal", Legs: 2, TiedAggregateResolution: "penalties"},
+		},
+	})
+
+	if err == nil {
+		t.Fatalf("expected non-owner playoff configuration to fail")
+	}
+}
+
 func cloneLeague(in *domain.League) *domain.League {
 	if in == nil {
 		return nil
@@ -384,6 +545,31 @@ func cloneSeason(in *domain.Season) *domain.Season {
 
 	out := *in
 	out.Rounds = rounds
+	if in.PlayoffRules != nil {
+		playoffRules := *in.PlayoffRules
+		playoffRounds := make([]domain.PlayoffRoundRule, len(in.PlayoffRules.Rounds))
+		copy(playoffRounds, in.PlayoffRules.Rounds)
+		playoffRules.Rounds = playoffRounds
+		out.PlayoffRules = &playoffRules
+	}
+	if in.PlayoffBracket != nil {
+		playoffRounds := make([]domain.PlayoffBracketRound, len(in.PlayoffBracket.Rounds))
+		for i, round := range in.PlayoffBracket.Rounds {
+			ties := make([]domain.PlayoffTie, len(round.Ties))
+			for j, tie := range round.Ties {
+				matches := make([]domain.Match, len(tie.Matches))
+				copy(matches, tie.Matches)
+				ties[j] = tie
+				ties[j].Matches = matches
+			}
+			playoffRounds[i] = domain.PlayoffBracketRound{
+				Name:  round.Name,
+				Order: round.Order,
+				Ties:  ties,
+			}
+		}
+		out.PlayoffBracket = &domain.PlayoffBracket{Rounds: playoffRounds}
+	}
 	return &out
 }
 

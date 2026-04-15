@@ -36,11 +36,23 @@ func (lr *LeagueRepository) findByIdTx(ctx context.Context, querier interface {
     		leagues.organization_id,
     		leagues.created_at,
     		leagues.updated_at,
-    		seasons.id as season_status
+    		current_season.id as season_status
 		FROM league_management.leagues AS leagues
-		LEFT JOIN league_management.seasons AS seasons
-			ON seasons.league_id=leagues.id
-			AND seasons.status IN ('pending', 'planned', 'in_progress', 'paused')
+		LEFT JOIN LATERAL (
+			SELECT seasons.id
+			FROM league_management.seasons AS seasons
+			WHERE seasons.league_id = leagues.id
+			  AND seasons.season_phase <> 'completed'
+			ORDER BY
+				CASE
+					WHEN seasons.status IN ('pending', 'planned', 'in_progress', 'paused') THEN 0
+					ELSE 1
+				END,
+				seasons.updated_at DESC,
+				seasons.created_at DESC,
+				seasons.id DESC
+			LIMIT 1
+		) AS current_season ON TRUE
 		WHERE leagues.id=$1`
 	if forUpdate {
 		sql += ` FOR UPDATE OF leagues`
@@ -369,17 +381,32 @@ func (lr *LeagueRepository) FetchLeagueDetails(league domain.League) (map[string
 	sql := `SELECT 
     			leagues.id, 
     			leagues.name, 
-    			seasons.name as season_name, 
-    			seasons.id as season_id, 
-    			seasons.status as season_status
+    			current_season.name as season_name, 
+    			current_season.id as season_id, 
+    			current_season.status as season_status,
+    			current_season.season_phase as season_phase
 			FROM leagues 
-			LEFT JOIN seasons ON seasons.league_id=leagues.id AND seasons.status in ('pending', 'planned', 'in_progress', 'paused')
+			LEFT JOIN LATERAL (
+				SELECT seasons.id, seasons.name, seasons.status, seasons.season_phase
+				FROM seasons
+				WHERE seasons.league_id = leagues.id
+				  AND seasons.season_phase <> 'completed'
+				ORDER BY
+					CASE
+						WHEN seasons.status IN ('pending', 'planned', 'in_progress', 'paused') THEN 0
+						ELSE 1
+					END,
+					seasons.updated_at DESC,
+					seasons.created_at DESC,
+					seasons.id DESC
+				LIMIT 1
+			) AS current_season ON TRUE
 			WHERE leagues.id=$1;`
 
 	var leagueId, leagueName string
-	var seasonId, seasonName, seasonStatus *string
+	var seasonId, seasonName, seasonStatus, seasonPhase *string
 
-	err := connection.QueryRow(context.Background(), sql, *league.Id).Scan(&leagueId, &leagueName, &seasonName, &seasonId, &seasonStatus)
+	err := connection.QueryRow(context.Background(), sql, *league.Id).Scan(&leagueId, &leagueName, &seasonName, &seasonId, &seasonStatus, &seasonPhase)
 
 	if err != nil {
 		return nil, err
@@ -401,6 +428,9 @@ func (lr *LeagueRepository) FetchLeagueDetails(league domain.League) (map[string
 		seasonProjection["id"] = *seasonId
 		seasonProjection["name"] = *seasonName
 		seasonProjection["status"] = *seasonStatus
+		if seasonPhase != nil {
+			seasonProjection["phase"] = *seasonPhase
+		}
 		leagueProjection["season"] = seasonProjection
 	}
 

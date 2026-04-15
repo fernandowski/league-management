@@ -12,6 +12,7 @@ import { useAppTheme } from "@/theme/theme";
 export interface SeasonMatchUpManagementProps {
     seasonId: string
     onRoundCompleted?: () => void
+    seasonStatus?: string
 }
 
 export default function SeasonMatchUpManagement(props: SeasonMatchUpManagementProps) {
@@ -52,15 +53,18 @@ export default function SeasonMatchUpManagement(props: SeasonMatchUpManagementPr
 
     const selectedRound = sortedRounds[roundIndex];
     const isCurrentRound = selectedRound?.round === sortedRounds[currentRoundIndex]?.round;
+    const selectedRoundHasOpenMatches = selectedRound?.matches.some((match) => match.status !== "finished") ?? false;
+    const seasonAllowsRoundCompletion = props.seasonStatus ? props.seasonStatus === "in_progress" : true;
+    const canCompleteSelectedRound = seasonAllowsRoundCompletion && isCurrentRound && selectedRoundHasOpenMatches;
 
     const onMatchPress = useCallback((matchScoreDetails: MatchScore) => {
         const isByeWeek = matchScoreDetails.home_team === "Bye" || matchScoreDetails.away_team === "Bye";
-        if (!isCurrentRound || isByeWeek) {
+        if (!canCompleteSelectedRound || isByeWeek || matchScoreDetails.status === "finished") {
             return;
         }
         setMatchDetails(matchScoreDetails);
         setOpenMangeMatch(true);
-    }, [isCurrentRound])
+    }, [canCompleteSelectedRound])
 
     const onModalClose = () => {
         setOpenMangeMatch(false);
@@ -113,7 +117,7 @@ export default function SeasonMatchUpManagement(props: SeasonMatchUpManagementPr
                     disablePrevious={roundIndex === 0}
                     disableNext={roundIndex === sortedRounds.length - 1}
                 />
-                {isCurrentRound && (
+                {canCompleteSelectedRound && (
                     <AppButton
                         variant="submit"
                         onPress={onCompleteRound}
@@ -130,7 +134,7 @@ export default function SeasonMatchUpManagement(props: SeasonMatchUpManagementPr
                 </View>
             )}
             <View style={styles.matchUpRoundContainer}>
-                <MatchUpRound data={selectedRound} onMatchPress={onMatchPress} isEditableRound={isCurrentRound}/>
+                <MatchUpRound data={selectedRound} onMatchPress={onMatchPress} isEditableRound={canCompleteSelectedRound}/>
             </View>
             { matchDetails && <ManageMatchScoreModal isOpen={openManageMatch} matchDetails={matchDetails} seasonId={props.seasonId} onSave={onSave} onClose={onModalClose}/>}
         </View>

@@ -15,6 +15,8 @@ type Match struct {
 	Status           MatchStatus
 	AssignedLocation MatchLocation
 	RefereeID        string // New field to track assigned referee
+	PlayoffTieID     string
+	MatchOrder       int
 }
 
 type MatchStatus string

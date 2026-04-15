@@ -3,7 +3,9 @@ import {StyleSheet, View} from "react-native";
 
 import {AppButton} from "@/components/ui/AppButton";
 import {AppCard} from "@/components/ui/AppCard";
+import {useNotification} from "@/components/ui/AppNotifications";
 import {AppSelect} from "@/components/ui/AppSelect";
+import {AppSwitch} from "@/components/ui/AppSwitch";
 import {AppText} from "@/components/ui/AppText";
 import {AppTextField} from "@/components/ui/AppTextField";
 import {PlayoffRulesResponse} from "@/hooks/useData";
@@ -16,11 +18,6 @@ interface PlayoffRulesFormProps {
     onSaved: () => void
 }
 
-const booleanOptions = [
-    {label: "No", value: "false"},
-    {label: "Yes", value: "true"},
-];
-
 const legsOptions = [
     {label: "Single Leg", value: "1"},
     {label: "Two Legs", value: "2"},
@@ -28,14 +25,15 @@ const legsOptions = [
 
 export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: PlayoffRulesFormProps) {
     const {postData, result, clearResult} = usePost();
+    const {showNotification} = useNotification();
     const theme = useAppTheme();
     const existingRules = playoffRules?.rules;
 
     const [qualifierCount, setQualifierCount] = useState("4");
     const [semifinalLegs, setSemifinalLegs] = useState("2");
     const [finalLegs, setFinalLegs] = useState("1");
-    const [thirdPlaceMatch, setThirdPlaceMatch] = useState("false");
-    const [reseedEachRound, setReseedEachRound] = useState("false");
+    const [thirdPlaceMatch, setThirdPlaceMatch] = useState(false);
+    const [reseedEachRound, setReseedEachRound] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -44,8 +42,8 @@ export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: Play
         }
 
         setQualifierCount(String(existingRules.qualifier_count));
-        setThirdPlaceMatch(String(existingRules.third_place_match));
-        setReseedEachRound(String(existingRules.reseed_each_round));
+        setThirdPlaceMatch(existingRules.third_place_match);
+        setReseedEachRound(existingRules.reseed_each_round);
 
         const semifinalRule = existingRules.rounds.find((round) => round.name === "semifinal");
         const finalRule = existingRules.rounds.find((round) => round.name === "final");
@@ -58,33 +56,37 @@ export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: Play
         }
     }, [existingRules]);
 
-    const isReadOnly = playoffRules?.season_phase === "playoffs" || playoffRules?.season_phase === "completed" || playoffRules?.season_status === "finished";
+    const isReadOnly = Boolean(playoffRules?.rules_locked);
 
     const onSave = async () => {
         clearResult();
         setIsSaving(true);
-        await postData(`/v1/seasons/${seasonId}/playoffs/rules`, {
+        const response = await postData(`/v1/seasons/${seasonId}/playoffs/rules`, {
             qualification_type: "top_n",
             qualifier_count: Number(qualifierCount),
-            reseed_each_round: reseedEachRound === "true",
-            third_place_match: thirdPlaceMatch === "true",
+            reseed_each_round: reseedEachRound,
+            third_place_match: thirdPlaceMatch,
             allow_admin_seed_override: false,
             rounds: [
                 {
                     name: "semifinal",
                     legs: Number(semifinalLegs),
                     higher_seed_hosts_second_leg: semifinalLegs === "2",
-                    tied_aggregate_resolution: "penalties",
+                    tied_aggregate_resolution: "higher_seed_advances",
                 },
                 {
                     name: "final",
                     legs: Number(finalLegs),
                     higher_seed_hosts_second_leg: false,
-                    tied_aggregate_resolution: "penalties",
+                    tied_aggregate_resolution: "clear_winner_required",
                 },
             ],
         }, "PUT");
         setIsSaving(false);
+        if (!response.ok) {
+            showNotification(response.error || "Unable to save playoff rules.", "error");
+            return;
+        }
         onSaved();
     };
 
@@ -101,7 +103,7 @@ export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: Play
                 {isReadOnly && (
                     <View style={[styles.notice, {backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant}]}>
                         <AppText style={{color: theme.colors.onSurfaceVariant}}>
-                            Playoff rules are read-only after the playoff phase starts.
+                            Playoff rules are read-only once a playoff match has been played.
                         </AppText>
                     </View>
                 )}
@@ -132,17 +134,17 @@ export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: Play
                 </View>
 
                 <View style={styles.grid}>
-                    <AppSelect
+                    <AppSwitch
                         label="Third-place Match"
+                        description="Include a placement match for semifinal losers."
                         value={thirdPlaceMatch}
-                        options={booleanOptions}
                         disabled={isReadOnly}
                         onValueChange={setThirdPlaceMatch}
                     />
-                    <AppSelect
+                    <AppSwitch
                         label="Reseed Each Round"
+                        description="Recalculate seeding after each completed round."
                         value={reseedEachRound}
-                        options={booleanOptions}
                         disabled={isReadOnly}
                         onValueChange={setReseedEachRound}
                     />
@@ -151,7 +153,7 @@ export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: Play
                 <View style={[styles.summaryBox, {backgroundColor: theme.colors.primaryContainer}]}>
                     <AppText variant="labelLarge" style={{color: theme.colors.primary}}>MVP Rules Summary</AppText>
                     <AppText style={{color: theme.colors.onPrimaryContainer}}>
-                        Qualification uses final standings, ties resolve by penalties, and away goals are not part of this first slice.
+                        Qualification uses final standings, tied aggregate playoff rounds advance the higher seed, and the final must produce a clear winner.
                     </AppText>
                 </View>
 

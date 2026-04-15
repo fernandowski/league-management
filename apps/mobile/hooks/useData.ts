@@ -53,6 +53,9 @@ export interface PlayoffRulesResponse {
     season_status: string
     season_phase: string
     configured: boolean
+    bracket_generated: boolean
+    playoffs_started: boolean
+    rules_locked: boolean
     rules: {
         qualification_type: string
         qualifier_count: number
@@ -61,6 +64,64 @@ export interface PlayoffRulesResponse {
         allow_admin_seed_override: boolean
         rounds: PlayoffRoundRuleResponse[]
     } | null
+}
+
+export interface PlayoffQualifiedTeamResponse {
+    team_id: string
+    team_name: string
+    seed: number
+    rank: number
+    points: number
+    wins: number
+    losses: number
+    ties: number
+    total_goals: number
+}
+
+export interface PlayoffQualificationPreviewResponse {
+    season_id: string
+    qualifier_count: number
+    bracket_exists: boolean
+    qualified_teams: PlayoffQualifiedTeamResponse[]
+}
+
+export interface PlayoffBracketTeamResponse {
+    id: string | null
+    name: string
+}
+
+export interface PlayoffTieResponse {
+    id: string
+    slot_order: number
+    status: string
+    home_seed: number | null
+    away_seed: number | null
+    winner_team_id: string | null
+    home_team: PlayoffBracketTeamResponse
+    away_team: PlayoffBracketTeamResponse
+    matches: PlayoffTieMatchResponse[]
+}
+
+export interface PlayoffTieMatchResponse {
+    id: string
+    match_order: number
+    home_score: number
+    away_score: number
+    status: string
+    home_team: string
+    away_team: string
+}
+
+export interface PlayoffBracketRoundResponse {
+    name: string
+    order: number
+    ties: PlayoffTieResponse[]
+}
+
+export interface PlayoffBracketResponse {
+    season_id: string
+    generated: boolean
+    rounds: PlayoffBracketRoundResponse[]
 }
 
 export interface SeasonStandings {
