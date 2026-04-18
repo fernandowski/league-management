@@ -50,7 +50,7 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 	}
 	defer rows.Close()
 
-	matchesMap := make(map[int][]domain.Match)
+	matchesMap := make(map[int][]domain.MatchSnapshot)
 
 	var seasonId, seasonName, leagueId, seasonStatus, seasonPhase string
 	var version int
@@ -74,19 +74,24 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 			if awayTeamID != nil {
 				awayId = *awayTeamID
 			}
-			newMatch, _ := domain.NewMatch(matchID, homeId, awayId)
-			newMatch.AwayTeamScore = *awayTeamScore
-			newMatch.HomeTeamScore = *homeTeamScore
+			status := domain.MatchStatusScheduled
 			if matchStatus != nil {
-				newMatch.Status = domain.MatchStatus(*matchStatus)
+				status = domain.MatchStatus(*matchStatus)
 			}
-			if refereeID != nil {
-				newMatch.RefereeID = *refereeID
+
+			newMatch := domain.MatchSnapshot{
+				ID:            *matchID,
+				HomeTeamID:    homeId,
+				AwayTeamID:    awayId,
+				HomeTeamScore: *homeTeamScore,
+				AwayTeamScore: *awayTeamScore,
+				Status:        status,
+				RefereeID:     derefString(refereeID),
 			}
 			if exists {
 				matchesMap[*round] = append(matches, newMatch)
 			} else {
-				matchesMap[*round] = []domain.Match{newMatch}
+				matchesMap[*round] = []domain.MatchSnapshot{newMatch}
 			}
 		}
 		foundRows = true
@@ -96,45 +101,44 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 		return nil, errors.New("no season found")
 	}
 
-	rounds := []domain.Round{}
-
+	rounds := []domain.RoundSnapshot{}
 	for key, value := range matchesMap {
-		newRound := domain.NewRound(key)
-		round := newRound.AddMatches(value)
-		rounds = append(rounds, *round)
-	}
-
-	season := domain.Season{
-		ID:             seasonId,
-		LeagueId:       leagueId,
-		Name:           seasonName,
-		Status:         domain.SeasonStatus(seasonStatus),
-		Phase:          domain.SeasonPhase(seasonPhase),
-		Version:        version,
-		Rounds:         rounds,
-		MatchLocations: nil,
-		ChampionTeamID: championTeamID,
+		rounds = append(rounds, domain.RoundSnapshot{
+			RoundNumber: key,
+			Matches:     value,
+		})
 	}
 
 	playoffRules, err := sr.findPlayoffRules(seasonID)
 	if err != nil {
 		return nil, err
 	}
-	season.PlayoffRules = playoffRules
 	playoffBracket, err := sr.findPlayoffBracket(seasonID)
 	if err != nil {
 		return nil, err
 	}
-	season.PlayoffBracket = playoffBracket
 
-	return &season, nil
+	return domain.RehydrateSeasonFromSnapshot(domain.SeasonSnapshot{
+		ID:             seasonId,
+		LeagueID:       leagueId,
+		Name:           seasonName,
+		Status:         domain.SeasonStatus(seasonStatus),
+		Phase:          domain.SeasonPhase(seasonPhase),
+		Version:        version,
+		Rounds:         rounds,
+		PlayoffRules:   playoffRules,
+		PlayoffBracket: playoffBracket,
+		ChampionTeamID: championTeamID,
+	}), nil
 }
 
 func (sr *SeasonRepository) Save(season *domain.Season) error {
 	return database.WithTx(context.Background(), func(tx pgx.Tx) error {
-		if season.Version <= 0 {
+		snapshot := season.Snapshot()
+
+		if snapshot.Version <= 0 {
 			sql := `INSERT INTO league_management.seasons (id, name, league_id, status, season_phase, version, champion_team_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`
-			_, err := tx.Exec(context.Background(), sql, season.ID, season.Name, season.LeagueId, season.Status, season.Phase, 1, season.ChampionTeamID)
+			_, err := tx.Exec(context.Background(), sql, snapshot.ID, snapshot.Name, snapshot.LeagueID, snapshot.Status, snapshot.Phase, 1, snapshot.ChampionTeamID)
 			if err != nil {
 				var pgErr *pgconn.PgError
 				if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -142,20 +146,20 @@ func (sr *SeasonRepository) Save(season *domain.Season) error {
 				}
 				return err
 			}
-			season.Version = 1
+			season.ApplyPersistedVersion(1)
 		} else {
 			sql := `UPDATE league_management.seasons
 				SET name=$1, league_id=$2, status=$3, season_phase=$4, champion_team_id=$5, version=version+1
 				WHERE id=$6 AND version=$7`
 
-			tag, err := tx.Exec(context.Background(), sql, season.Name, season.LeagueId, season.Status, season.Phase, season.ChampionTeamID, season.ID, season.Version)
+			tag, err := tx.Exec(context.Background(), sql, snapshot.Name, snapshot.LeagueID, snapshot.Status, snapshot.Phase, snapshot.ChampionTeamID, snapshot.ID, snapshot.Version)
 			if err != nil {
 				return err
 			}
 			if tag.RowsAffected() == 0 {
 				return app_errors.ErrConcurrentModification
 			}
-			season.Version++
+			season.ApplyPersistedVersion(snapshot.Version + 1)
 		}
 
 		if err := sr.savePlayoffRules(tx, season); err != nil {
@@ -169,7 +173,7 @@ func (sr *SeasonRepository) Save(season *domain.Season) error {
 		params := []interface{}{}
 		paramIndex := 1
 
-		if len(season.Rounds) > 0 {
+		if len(snapshot.Rounds) > 0 {
 			matchSQL := `INSERT INTO league_management.season_schedules 
 					 (id, season_id, league_id, round, home_team_id, away_team_id, home_team_score, away_team_score, status, referee_id) 
 					 VALUES %s 
@@ -182,8 +186,16 @@ func (sr *SeasonRepository) Save(season *domain.Season) error {
 						 away_team_score = EXCLUDED.away_team_score, 
 						 status = EXCLUDED.status,
 						 referee_id = EXCLUDED.referee_id;`
-			for _, round := range season.Rounds {
+			for _, round := range snapshot.Rounds {
 				for _, match := range round.Matches {
+					var homeTeamID interface{}
+					var awayTeamID interface{}
+					if match.HomeTeamID != "bye" && match.HomeTeamID != "" {
+						homeTeamID = match.HomeTeamID
+					}
+					if match.AwayTeamID != "bye" && match.AwayTeamID != "" {
+						awayTeamID = match.AwayTeamID
+					}
 					parametrizedValues := fmt.Sprintf(
 						"($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
 						paramIndex, paramIndex+1, paramIndex+2, paramIndex+3, paramIndex+4, paramIndex+5, paramIndex+6, paramIndex+7, paramIndex+8, paramIndex+9,
@@ -192,11 +204,11 @@ func (sr *SeasonRepository) Save(season *domain.Season) error {
 					params = append(
 						params,
 						match.ID,
-						season.ID,
-						season.LeagueId,
+						snapshot.ID,
+						snapshot.LeagueID,
 						round.RoundNumber,
-						match.GetHomeTeam(),
-						match.GetAwayTeam(),
+						homeTeamID,
+						awayTeamID,
 						match.HomeTeamScore,
 						match.AwayTeamScore,
 						match.Status,
@@ -217,7 +229,7 @@ func (sr *SeasonRepository) Save(season *domain.Season) error {
 	})
 }
 
-func (sr *SeasonRepository) findPlayoffRules(seasonID string) (*domain.PlayoffRules, error) {
+func (sr *SeasonRepository) findPlayoffRules(seasonID string) (*domain.PlayoffRulesSnapshot, error) {
 	connection := database.GetConnection()
 
 	rulesSQL := `SELECT qualification_type, qualifier_count, reseed_each_round, third_place_match, allow_admin_seed_override
@@ -253,27 +265,25 @@ func (sr *SeasonRepository) findPlayoffRules(seasonID string) (*domain.PlayoffRu
 	}
 	defer rows.Close()
 
-	rounds := []domain.PlayoffRoundRule{}
+	rounds := []domain.PlayoffRoundRuleSnapshot{}
 	for rows.Next() {
-		var round domain.PlayoffRoundRule
+		var round domain.PlayoffRoundRuleSnapshot
 		if err := rows.Scan(&round.Name, &round.Legs, &round.HigherSeedHostsSecondLeg, &round.TiedAggregateResolution); err != nil {
 			return nil, err
 		}
 		rounds = append(rounds, round)
 	}
 
-	return &domain.PlayoffRules{
-		QualificationType:      qualificationType,
-		QualifierCount:         qualifierCount,
-		ReseedEachRound:        reseedEachRound,
-		ThirdPlaceMatch:        thirdPlaceMatch,
-		AllowAdminSeedOverride: allowAdminSeedOverride,
-		Rounds:                 rounds,
+	return &domain.PlayoffRulesSnapshot{
+		QualificationType: qualificationType,
+		QualifierCount:    qualifierCount,
+		Rounds:            rounds,
 	}, nil
 }
 
 func (sr *SeasonRepository) savePlayoffRules(tx pgx.Tx, season *domain.Season) error {
-	if season.PlayoffRules == nil {
+	snapshot := season.Snapshot()
+	if snapshot.PlayoffRules == nil {
 		return nil
 	}
 
@@ -290,29 +300,29 @@ func (sr *SeasonRepository) savePlayoffRules(tx pgx.Tx, season *domain.Season) e
 	_, err := tx.Exec(
 		context.Background(),
 		rulesSQL,
-		season.ID,
-		season.PlayoffRules.QualificationType,
-		season.PlayoffRules.QualifierCount,
-		season.PlayoffRules.ReseedEachRound,
-		season.PlayoffRules.ThirdPlaceMatch,
-		season.PlayoffRules.AllowAdminSeedOverride,
+		snapshot.ID,
+		snapshot.PlayoffRules.QualificationType,
+		snapshot.PlayoffRules.QualifierCount,
+		false,
+		false,
+		false,
 	)
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.Exec(context.Background(), `DELETE FROM league_management.season_playoff_round_rules WHERE season_id=$1`, season.ID)
+	_, err = tx.Exec(context.Background(), `DELETE FROM league_management.season_playoff_round_rules WHERE season_id=$1`, snapshot.ID)
 	if err != nil {
 		return err
 	}
 
-	for index, round := range season.PlayoffRules.Rounds {
+	for index, round := range snapshot.PlayoffRules.Rounds {
 		_, err = tx.Exec(
 			context.Background(),
 			`INSERT INTO league_management.season_playoff_round_rules
 				(season_id, round_order, round_name, legs, higher_seed_hosts_second_leg, tied_aggregate_resolution)
 			 VALUES ($1, $2, $3, $4, $5, $6)`,
-			season.ID,
+			snapshot.ID,
 			index+1,
 			round.Name,
 			round.Legs,
@@ -327,7 +337,7 @@ func (sr *SeasonRepository) savePlayoffRules(tx pgx.Tx, season *domain.Season) e
 	return nil
 }
 
-func (sr *SeasonRepository) findPlayoffBracket(seasonID string) (*domain.PlayoffBracket, error) {
+func (sr *SeasonRepository) findPlayoffBracket(seasonID string) (*domain.PlayoffBracketSnapshot, error) {
 	connection := database.GetConnection()
 
 	var bracketID string
@@ -348,11 +358,11 @@ func (sr *SeasonRepository) findPlayoffBracket(seasonID string) (*domain.Playoff
 	}
 	defer rows.Close()
 
-	bracket := &domain.PlayoffBracket{Rounds: []domain.PlayoffBracketRound{}}
+	playoffRounds := []domain.PlayoffBracketRoundSnapshot{}
 	roundMap := map[int]int{}
 
 	for rows.Next() {
-		var tie domain.PlayoffTie
+		var tie domain.PlayoffTieSnapshot
 		var homeSeed, awaySeed *int
 		var homeTeamID, awayTeamID, winnerTeamID *string
 		if err := rows.Scan(&tie.ID, &tie.RoundName, &tie.RoundOrder, &tie.SlotOrder, &homeSeed, &awaySeed, &homeTeamID, &awayTeamID, &tie.Status, &winnerTeamID); err != nil {
@@ -381,31 +391,32 @@ func (sr *SeasonRepository) findPlayoffBracket(seasonID string) (*domain.Playoff
 
 		index, exists := roundMap[tie.RoundOrder]
 		if !exists {
-			bracket.Rounds = append(bracket.Rounds, domain.PlayoffBracketRound{
+			playoffRounds = append(playoffRounds, domain.PlayoffBracketRoundSnapshot{
 				Name:  tie.RoundName,
 				Order: tie.RoundOrder,
-				Ties:  []domain.PlayoffTie{},
+				Ties:  []domain.PlayoffTieSnapshot{},
 			})
-			index = len(bracket.Rounds) - 1
+			index = len(playoffRounds) - 1
 			roundMap[tie.RoundOrder] = index
 		}
-		bracket.Rounds[index].Ties = append(bracket.Rounds[index].Ties, tie)
+		playoffRounds[index].Ties = append(playoffRounds[index].Ties, tie)
 	}
 
-	return bracket, nil
+	return domain.RehydratePlayoffBracket(playoffRounds), nil
 }
 
 func (sr *SeasonRepository) savePlayoffBracket(tx pgx.Tx, season *domain.Season) error {
-	if season.PlayoffBracket == nil {
+	snapshot := season.Snapshot()
+	if snapshot.PlayoffBracket == nil {
 		return nil
 	}
 
 	var bracketID string
-	err := tx.QueryRow(context.Background(), `SELECT id FROM league_management.season_playoff_brackets WHERE season_id=$1`, season.ID).Scan(&bracketID)
+	err := tx.QueryRow(context.Background(), `SELECT id FROM league_management.season_playoff_brackets WHERE season_id=$1`, snapshot.ID).Scan(&bracketID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			bracketID = uuid.New().String()
-			_, err = tx.Exec(context.Background(), `INSERT INTO league_management.season_playoff_brackets (id, season_id, status) VALUES ($1, $2, $3)`, bracketID, season.ID, "generated")
+			_, err = tx.Exec(context.Background(), `INSERT INTO league_management.season_playoff_brackets (id, season_id, status) VALUES ($1, $2, $3)`, bracketID, snapshot.ID, "generated")
 			if err != nil {
 				return err
 			}
@@ -419,7 +430,7 @@ func (sr *SeasonRepository) savePlayoffBracket(tx pgx.Tx, season *domain.Season)
 		return err
 	}
 
-	for _, round := range season.PlayoffBracket.Rounds {
+	for _, round := range snapshot.PlayoffBracket.Rounds {
 		for _, tie := range round.Ties {
 			var homeSeed interface{}
 			var awaySeed interface{}
@@ -477,7 +488,7 @@ func (sr *SeasonRepository) savePlayoffBracket(tx pgx.Tx, season *domain.Season)
 	return nil
 }
 
-func (sr *SeasonRepository) findPlayoffMatches(tieID string) ([]domain.Match, error) {
+func (sr *SeasonRepository) findPlayoffMatches(tieID string) ([]domain.MatchSnapshot, error) {
 	connection := database.GetConnection()
 
 	rows, err := connection.Query(context.Background(), `SELECT id, match_order, home_team_id, away_team_id, home_score, away_score, status
@@ -486,30 +497,44 @@ func (sr *SeasonRepository) findPlayoffMatches(tieID string) ([]domain.Match, er
 		ORDER BY match_order ASC`, tieID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return []domain.Match{}, nil
+			return []domain.MatchSnapshot{}, nil
 		}
 		return nil, err
 	}
 	defer rows.Close()
 
-	matches := []domain.Match{}
+	matches := []domain.MatchSnapshot{}
 	for rows.Next() {
-		var match domain.Match
+		var matchID string
+		var matchOrder int
 		var homeTeamID, awayTeamID *string
-		if err := rows.Scan(&match.ID, &match.MatchOrder, &homeTeamID, &awayTeamID, &match.HomeTeamScore, &match.AwayTeamScore, &match.Status); err != nil {
+		var homeScore, awayScore int
+		var status domain.MatchStatus
+		if err := rows.Scan(&matchID, &matchOrder, &homeTeamID, &awayTeamID, &homeScore, &awayScore, &status); err != nil {
 			return nil, err
 		}
-		match.PlayoffTieID = tieID
-		if homeTeamID != nil {
-			match.HomeTeamID = *homeTeamID
-		}
-		if awayTeamID != nil {
-			match.AwayTeamID = *awayTeamID
-		}
-		matches = append(matches, match)
+		match := domain.RehydrateMatch(domain.MatchState{
+			ID:            matchID,
+			PlayoffTieID:  tieID,
+			MatchOrder:    matchOrder,
+			HomeTeamID:    derefString(homeTeamID),
+			AwayTeamID:    derefString(awayTeamID),
+			HomeTeamScore: homeScore,
+			AwayTeamScore: awayScore,
+			Status:        status,
+		})
+		matches = append(matches, match.Snapshot())
 	}
 
 	return matches, nil
+}
+
+func derefString(value *string) string {
+	if value == nil {
+		return ""
+	}
+
+	return *value
 }
 
 func (sr *SeasonRepository) Search(orgOwnerID, leagueID string, searchDTO dtos.SearchSeasonDTO) ([]interface{}, int) {

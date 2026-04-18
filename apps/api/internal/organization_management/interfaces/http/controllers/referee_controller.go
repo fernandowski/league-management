@@ -3,7 +3,6 @@ package controllers
 import (
 	"encoding/json"
 	"league-management/internal/organization_management/application/services"
-	"league-management/internal/organization_management/domain"
 	"league-management/internal/organization_management/infrastructure/repositories"
 	"league-management/internal/shared/dtos"
 	"net/http"
@@ -37,31 +36,14 @@ func (rc *RefereeController) UpdateMatchScore(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Find the match in the season
-	var matchToUpdate *domain.Match
-	for i := range season.Rounds {
-		for j := range season.Rounds[i].Matches {
-			if season.Rounds[i].Matches[j].ID == dto.MatchID {
-				matchToUpdate = &season.Rounds[i].Matches[j]
-				break
-			}
-		}
-	}
-
-	if matchToUpdate == nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("match not found"))
-		return
-	}
-
-	err = rc.RefereeService.UpdateMatchScore(matchToUpdate, dto.RefereeID, dto.HomeScore, dto.AwayScore)
+	updatedSeason, err := rc.RefereeService.UpdateMatchScore(season, dto.MatchID, dto.RefereeID, dto.HomeScore, dto.AwayScore)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	err = rc.SeasonRepository.Save(season)
+	err = rc.SeasonRepository.Save(updatedSeason)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("failed to save match update"))

@@ -80,7 +80,7 @@ func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
 		return err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
 		return errors.New("only org owner can plan schedule")
 	}
 
-	err = season.ScheduleRounds(*league)
+	err = season.ScheduleRounds(leagueIDValue(league.Id), activeMemberships(league.Memberships))
 	if err != nil {
 		return err
 	}
@@ -107,13 +107,32 @@ func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
 	return nil
 }
 
+func activeMemberships(memberships []domain.LeagueMembership) []domain.LeagueMembership {
+	active := make([]domain.LeagueMembership, 0, len(memberships))
+	for _, membership := range memberships {
+		if membership.MemberShipStatus == domain.MembershipActive {
+			active = append(active, membership)
+		}
+	}
+
+	return active
+}
+
+func leagueIDValue(id *string) string {
+	if id == nil {
+		return ""
+	}
+
+	return *id
+}
+
 func (ss *SeasonService) StartSeason(orgOwnerID, seasonID string) error {
 	season, err := ss.seasonRepository.FindByID(seasonID)
 	if err != nil {
 		return err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return err
 	}
@@ -147,7 +166,7 @@ func (ss *SeasonService) ChangeMatchUpScore(orgOwnerID, seasonID string, changeS
 		return err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return err
 	}
@@ -181,7 +200,7 @@ func (ss *SeasonService) CompleteCurrentRound(orgOwnerID, seasonID string) error
 		return err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return err
 	}
@@ -215,7 +234,7 @@ func (ss *SeasonService) SeasonDetails(orgOwnerID, seasonID string) (map[string]
 		return nil, err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +248,7 @@ func (ss *SeasonService) SeasonDetails(orgOwnerID, seasonID string) (map[string]
 		return nil, errors.New("only org owner can view details")
 	}
 
-	result, err := ss.seasonRepository.FetchDetails(season.ID)
+	result, err := ss.seasonRepository.FetchDetails(season.SeasonID())
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +272,7 @@ func (ss *SeasonService) SeasonStandings(orgOwnerID, seasonID string) (map[strin
 		return nil, err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +286,7 @@ func (ss *SeasonService) SeasonStandings(orgOwnerID, seasonID string) (map[strin
 		return nil, errors.New("only org owner can view details")
 	}
 
-	result, err := ss.seasonRepository.FetchSeasonStandings(season.ID)
+	result, err := ss.seasonRepository.FetchSeasonStandings(season.SeasonID())
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +299,7 @@ func (ss *SeasonService) SeasonMatchUps(orgOwnerID, seasonID string) ([]interfac
 		return nil, err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +313,7 @@ func (ss *SeasonService) SeasonMatchUps(orgOwnerID, seasonID string) ([]interfac
 		return nil, errors.New("only org owner can view details")
 	}
 
-	result, err := ss.seasonRepository.FetchSeasonMatchUps(season.ID)
+	result, err := ss.seasonRepository.FetchSeasonMatchUps(season.SeasonID())
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +327,7 @@ func (ss *SeasonService) ConfigurePlayoffRules(orgOwnerID, seasonID string, dto 
 		return err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return err
 	}
@@ -322,17 +341,14 @@ func (ss *SeasonService) ConfigurePlayoffRules(orgOwnerID, seasonID string, dto 
 		return errors.New("only org owner can configure playoff rules")
 	}
 
-	rules := domain.PlayoffRules{
-		QualificationType:      dto.QualificationType,
-		QualifierCount:         dto.QualifierCount,
-		ReseedEachRound:        dto.ReseedEachRound,
-		ThirdPlaceMatch:        dto.ThirdPlaceMatch,
-		AllowAdminSeedOverride: dto.AllowAdminSeedOverride,
-		Rounds:                 make([]domain.PlayoffRoundRule, 0, len(dto.Rounds)),
+	rules := domain.PlayoffRulesSnapshot{
+		QualificationType: dto.QualificationType,
+		QualifierCount:    dto.QualifierCount,
+		Rounds:            make([]domain.PlayoffRoundRuleSnapshot, 0, len(dto.Rounds)),
 	}
 
 	for _, round := range dto.Rounds {
-		rules.Rounds = append(rules.Rounds, domain.PlayoffRoundRule{
+		rules.Rounds = append(rules.Rounds, domain.PlayoffRoundRuleSnapshot{
 			Name:                     round.Name,
 			Legs:                     round.Legs,
 			HigherSeedHostsSecondLeg: round.HigherSeedHostsSecondLeg,
@@ -354,7 +370,7 @@ func (ss *SeasonService) PlayoffRules(orgOwnerID, seasonID string) (map[string]i
 		return nil, err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return nil, err
 	}
@@ -368,20 +384,24 @@ func (ss *SeasonService) PlayoffRules(orgOwnerID, seasonID string) (map[string]i
 		return nil, errors.New("only org owner can view playoff rules")
 	}
 
+	qualificationType, configured := season.PlayoffQualificationType()
+	qualifierCount, _ := season.PlayoffQualifierCount()
+	roundRules := season.PlayoffRoundRules()
+
 	result := map[string]interface{}{
-		"season_id":         season.ID,
-		"season_status":     season.Status,
-		"season_phase":      season.Phase,
-		"configured":        season.PlayoffRules != nil,
-		"bracket_generated": hasUsablePlayoffBracket(season),
-		"playoffs_started":  season.PlayoffBracket != nil && season.Phase == domain.SeasonPhasePlayoffs && season.Status == domain.SeasonStatusInProgress && hasStartedPlayoffMatches(season),
-		"rules_locked":      season.Phase == domain.SeasonPhaseCompleted || hasStartedPlayoffMatches(season),
+		"season_id":         season.SeasonID(),
+		"season_status":     season.CurrentStatus(),
+		"season_phase":      season.CurrentPhase(),
+		"configured":        configured,
+		"bracket_generated": season.HasUsablePlayoffBracket(),
+		"playoffs_started":  season.HasPlayoffBracket() && season.CurrentPhase() == domain.SeasonPhasePlayoffs && season.CurrentStatus() == domain.SeasonStatusInProgress && season.HasStartedPlayoffMatches(),
+		"rules_locked":      season.CurrentPhase() == domain.SeasonPhaseCompleted || season.HasStartedPlayoffMatches(),
 		"rules":             nil,
 	}
 
-	if season.PlayoffRules != nil {
-		rounds := make([]map[string]interface{}, 0, len(season.PlayoffRules.Rounds))
-		for _, round := range season.PlayoffRules.Rounds {
+	if configured {
+		rounds := make([]map[string]interface{}, 0, len(roundRules))
+		for _, round := range roundRules {
 			rounds = append(rounds, map[string]interface{}{
 				"name":                         round.Name,
 				"legs":                         round.Legs,
@@ -391,53 +411,13 @@ func (ss *SeasonService) PlayoffRules(orgOwnerID, seasonID string) (map[string]i
 		}
 
 		result["rules"] = map[string]interface{}{
-			"qualification_type":        season.PlayoffRules.QualificationType,
-			"qualifier_count":           season.PlayoffRules.QualifierCount,
-			"reseed_each_round":         season.PlayoffRules.ReseedEachRound,
-			"third_place_match":         season.PlayoffRules.ThirdPlaceMatch,
-			"allow_admin_seed_override": season.PlayoffRules.AllowAdminSeedOverride,
-			"rounds":                    rounds,
+			"qualification_type": qualificationType,
+			"qualifier_count":    qualifierCount,
+			"rounds":             rounds,
 		}
 	}
 
 	return result, nil
-}
-
-func hasStartedPlayoffMatches(season *domain.Season) bool {
-	if season == nil || season.PlayoffBracket == nil {
-		return false
-	}
-
-	for _, round := range season.PlayoffBracket.Rounds {
-		for _, tie := range round.Ties {
-			for _, match := range tie.Matches {
-				if match.Status != domain.MatchStatusScheduled {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
-}
-
-func hasUsablePlayoffBracket(season *domain.Season) bool {
-	if season == nil || season.PlayoffBracket == nil || len(season.PlayoffBracket.Rounds) == 0 {
-		return false
-	}
-
-	firstRound := season.PlayoffBracket.Rounds[0]
-	if len(firstRound.Ties) == 0 {
-		return false
-	}
-
-	for _, tie := range firstRound.Ties {
-		if tie.HomeTeamID == "" || tie.AwayTeamID == "" || len(tie.Matches) == 0 {
-			return false
-		}
-	}
-
-	return true
 }
 
 func (ss *SeasonService) PlayoffQualificationPreview(orgOwnerID, seasonID string) (map[string]interface{}, error) {
@@ -446,7 +426,7 @@ func (ss *SeasonService) PlayoffQualificationPreview(orgOwnerID, seasonID string
 		return nil, err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return nil, err
 	}
@@ -459,11 +439,12 @@ func (ss *SeasonService) PlayoffQualificationPreview(orgOwnerID, seasonID string
 	if !organization.BelongsToOwner(orgOwnerID) {
 		return nil, errors.New("only org owner can view playoff qualification")
 	}
-	if season.PlayoffRules == nil {
+	qualifierCount, configured := season.PlayoffQualifierCount()
+	if !configured {
 		return nil, errors.New("playoff rules must be configured first")
 	}
 
-	standings, err := ss.seasonRepository.FetchSeasonStandings(season.ID)
+	standings, err := ss.seasonRepository.FetchSeasonStandings(season.SeasonID())
 	if err != nil {
 		return nil, err
 	}
@@ -473,7 +454,7 @@ func (ss *SeasonService) PlayoffQualificationPreview(orgOwnerID, seasonID string
 		return nil, errors.New("invalid standings response")
 	}
 
-	limit := season.PlayoffRules.QualifierCount
+	limit := qualifierCount
 	if len(standingRows) < limit {
 		limit = len(standingRows)
 	}
@@ -498,10 +479,10 @@ func (ss *SeasonService) PlayoffQualificationPreview(orgOwnerID, seasonID string
 	}
 
 	return map[string]interface{}{
-		"season_id":       season.ID,
-		"qualifier_count": season.PlayoffRules.QualifierCount,
+		"season_id":       season.SeasonID(),
+		"qualifier_count": qualifierCount,
 		"qualified_teams": qualifiedTeams,
-		"bracket_exists":  hasUsablePlayoffBracket(season),
+		"bracket_exists":  season.HasUsablePlayoffBracket(),
 	}, nil
 }
 
@@ -511,7 +492,7 @@ func (ss *SeasonService) GeneratePlayoffBracket(orgOwnerID, seasonID string) err
 		return err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return err
 	}
@@ -524,11 +505,12 @@ func (ss *SeasonService) GeneratePlayoffBracket(orgOwnerID, seasonID string) err
 	if !organization.BelongsToOwner(orgOwnerID) {
 		return errors.New("only org owner can generate playoff bracket")
 	}
-	if season.PlayoffRules == nil {
+	qualifierCount, configured := season.PlayoffQualifierCount()
+	if !configured {
 		return errors.New("playoff rules must be configured first")
 	}
 
-	standings, err := ss.seasonRepository.FetchSeasonStandings(season.ID)
+	standings, err := ss.seasonRepository.FetchSeasonStandings(season.SeasonID())
 	if err != nil {
 		return err
 	}
@@ -537,12 +519,12 @@ func (ss *SeasonService) GeneratePlayoffBracket(orgOwnerID, seasonID string) err
 	if !ok {
 		return errors.New("invalid standings response")
 	}
-	if len(standingRows) < season.PlayoffRules.QualifierCount {
+	if len(standingRows) < qualifierCount {
 		return errors.New("not enough ranked teams to generate playoff bracket")
 	}
 
-	qualifiedTeams := make([]domain.PlayoffQualifiedTeam, 0, season.PlayoffRules.QualifierCount)
-	for index := 0; index < season.PlayoffRules.QualifierCount; index++ {
+	qualifiedTeams := make([]domain.PlayoffQualifiedTeam, 0, qualifierCount)
+	for index := 0; index < qualifierCount; index++ {
 		row, ok := standingRows[index].(map[string]interface{})
 		if !ok {
 			return errors.New("invalid standings row")
@@ -573,7 +555,7 @@ func (ss *SeasonService) PlayoffBracket(orgOwnerID, seasonID string) (map[string
 		return nil, err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return nil, err
 	}
@@ -587,7 +569,7 @@ func (ss *SeasonService) PlayoffBracket(orgOwnerID, seasonID string) (map[string
 		return nil, errors.New("only org owner can view playoff bracket")
 	}
 
-	return ss.seasonRepository.FetchPlayoffBracket(season.ID)
+	return ss.seasonRepository.FetchPlayoffBracket(season.SeasonID())
 }
 
 func (ss *SeasonService) RecordPlayoffMatchScore(orgOwnerID, seasonID, tieID, matchID string, dto dtos.ChangeGameScoreDTO) error {
@@ -596,7 +578,7 @@ func (ss *SeasonService) RecordPlayoffMatchScore(orgOwnerID, seasonID, tieID, ma
 		return err
 	}
 
-	league, err := ss.leagueRepository.FindById(season.LeagueId)
+	league, err := ss.leagueRepository.FindById(season.LeagueID())
 	if err != nil {
 		return err
 	}

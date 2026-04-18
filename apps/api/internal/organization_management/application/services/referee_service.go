@@ -11,19 +11,17 @@ func NewRefereeService() *RefereeService {
 	return &RefereeService{}
 }
 
-// UpdateMatchScore allows a referee to update the score of a match
-func (rs *RefereeService) UpdateMatchScore(match *domain.Match, refereeID string, homeScore, awayScore int) error {
-	if match == nil {
-		return errors.New("match cannot be nil")
+// UpdateMatchScore allows a referee to update the score of a match through the season aggregate.
+func (rs *RefereeService) UpdateMatchScore(season *domain.Season, matchID, refereeID string, homeScore, awayScore int) (*domain.Season, error) {
+	if season == nil {
+		return nil, errors.New("season cannot be nil")
 	}
 	if refereeID == "" {
-		return errors.New("refereeID cannot be empty")
+		return nil, errors.New("refereeID cannot be empty")
 	}
 	if homeScore < 0 || awayScore < 0 {
-		return errors.New("scores must be non-negative")
+		return nil, errors.New("scores must be non-negative")
 	}
-	match.HomeTeamScore = homeScore
-	match.AwayTeamScore = awayScore
-	match.RefereeID = refereeID
-	return nil
+
+	return season.ChangeMatchScoreByReferee(matchID, refereeID, homeScore, awayScore)
 }

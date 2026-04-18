@@ -1,22 +1,50 @@
 package domain
 
 type Round struct {
+	roundNumber int
+	matches     []Match
+}
+
+type RoundSnapshot struct {
 	RoundNumber int
-	Matches     []Match
+	Matches     []MatchSnapshot
 }
 
 func NewRound(roundNumber int) Round {
 	return Round{
-		RoundNumber: roundNumber,
-		Matches:     []Match{},
+		roundNumber: roundNumber,
+		matches:     []Match{},
+	}
+}
+
+func RehydrateRound(roundNumber int, matches []Match) Round {
+	copiedMatches := make([]Match, len(matches))
+	copy(copiedMatches, matches)
+
+	return Round{
+		roundNumber: roundNumber,
+		matches:     copiedMatches,
+	}
+}
+
+func (r Round) Snapshot() RoundSnapshot {
+	matches := make([]MatchSnapshot, len(r.matches))
+	for i, match := range r.matches {
+		matches[i] = match.Snapshot()
+	}
+
+	return RoundSnapshot{
+		RoundNumber: r.roundNumber,
+		Matches:     matches,
 	}
 }
 
 func (r *Round) AddMatches(matches []Match) *Round {
-	return &Round{RoundNumber: r.RoundNumber, Matches: matches}
+	round := RehydrateRound(r.roundNumber, matches)
+	return &round
 }
 
 func (r *Round) AddMatch(match Match) {
-	matches := r.Matches
-	r.Matches = append(matches, match)
+	matches := r.matches
+	r.matches = append(matches, match)
 }

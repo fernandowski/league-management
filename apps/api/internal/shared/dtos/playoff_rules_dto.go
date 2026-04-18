@@ -1,12 +1,9 @@
 package dtos
 
 type ConfigurePlayoffRulesDTO struct {
-	QualificationType      string                     `json:"qualification_type"`
-	QualifierCount         int                        `json:"qualifier_count"`
-	ReseedEachRound        bool                       `json:"reseed_each_round"`
-	ThirdPlaceMatch        bool                       `json:"third_place_match"`
-	AllowAdminSeedOverride bool                       `json:"allow_admin_seed_override"`
-	Rounds                 []ConfigurePlayoffRoundDTO `json:"rounds"`
+	QualificationType string                     `json:"qualification_type"`
+	QualifierCount    int                        `json:"qualifier_count"`
+	Rounds            []ConfigurePlayoffRoundDTO `json:"rounds"`
 }
 
 type ConfigurePlayoffRoundDTO struct {

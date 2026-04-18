@@ -115,19 +115,24 @@ func (r *fakeSeasonRepo) Save(season *domain.Season) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if season.Version <= 0 {
+	if season.CurrentVersion() <= 0 {
 		r.season = cloneSeason(season)
-		r.season.Version = 1
+		snapshot := r.season.Snapshot()
+		snapshot.Version = 1
+		r.season = domain.RehydrateSeasonFromSnapshot(snapshot)
+		r.season.ApplyPersistedVersion(1)
 		return nil
 	}
 
-	if r.season.Version != season.Version {
+	if r.season.CurrentVersion() != season.CurrentVersion() {
 		return app_errors.ErrConcurrentModification
 	}
 
 	next := cloneSeason(season)
-	next.Version++
-	r.season = next
+	snapshot := next.Snapshot()
+	snapshot.Version = next.CurrentVersion() + 1
+	r.season = domain.RehydrateSeasonFromSnapshot(snapshot)
+	r.season.ApplyPersistedVersion(next.CurrentVersion() + 1)
 	return nil
 }
 
@@ -227,16 +232,20 @@ func TestSeasonService_StartSeason_ConcurrentStartConflictsOnVersion(t *testing.
 	seasonID := "season-1"
 
 	seasonRepo := &fakeSeasonRepo{
-		season: &domain.Season{
-			ID:       seasonID,
-			LeagueId: leagueID,
-			Name:     "Spring",
-			Status:   domain.SeasonStatusPlanned,
-			Version:  1,
-			Rounds: []domain.Round{
-				{RoundNumber: 1, Matches: []domain.Match{{ID: "match-1", HomeTeamID: "team-1", AwayTeamID: "team-2"}}},
+		season: rehydratedSeason(
+			seasonID,
+			leagueID,
+			"Spring",
+			domain.SeasonStatusPlanned,
+			"",
+			1,
+			[]domain.Round{
+				domain.RehydrateRound(1, []domain.Match{domain.RehydrateMatch(domain.MatchState{ID: "match-1", HomeTeamID: "team-1", AwayTeamID: "team-2"})}),
 			},
-		},
+			nil,
+			nil,
+			nil,
+		),
 		findBarrierTarget: 2,
 		findBarrier:       make(chan struct{}),
 	}
@@ -283,8 +292,8 @@ func TestSeasonService_StartSeason_ConcurrentStartConflictsOnVersion(t *testing.
 	if successes != 1 || conflicts != 1 {
 		t.Fatalf("expected one success and one concurrency conflict, got successes=%d conflicts=%d", successes, conflicts)
 	}
-	if seasonRepo.season.Status != domain.SeasonStatusInProgress {
-		t.Fatalf("expected final season status to be in_progress, got %s", seasonRepo.season.Status)
+	if seasonRepo.season.CurrentStatus() != domain.SeasonStatusInProgress {
+		t.Fatalf("expected final season status to be in_progress, got %s", seasonRepo.season.CurrentStatus())
 	}
 }
 
@@ -296,16 +305,20 @@ func TestSeasonService_ChangeMatchScore_ConcurrentUpdatesConflictOnVersion(t *te
 	matchID := "match-1"
 
 	seasonRepo := &fakeSeasonRepo{
-		season: &domain.Season{
-			ID:       seasonID,
-			LeagueId: leagueID,
-			Name:     "Spring",
-			Status:   domain.SeasonStatusInProgress,
-			Version:  1,
-			Rounds: []domain.Round{
-				{RoundNumber: 1, Matches: []domain.Match{{ID: matchID, HomeTeamID: "team-1", AwayTeamID: "team-2", Status: domain.MatchStatusInProgress}}},
+		season: rehydratedSeason(
+			seasonID,
+			leagueID,
+			"Spring",
+			domain.SeasonStatusInProgress,
+			"",
+			1,
+			[]domain.Round{
+				domain.RehydrateRound(1, []domain.Match{domain.RehydrateMatch(domain.MatchState{ID: matchID, HomeTeamID: "team-1", AwayTeamID: "team-2", Status: domain.MatchStatusInProgress})}),
 			},
-		},
+			nil,
+			nil,
+			nil,
+		),
 		findBarrierTarget: 2,
 		findBarrier:       make(chan struct{}),
 	}
@@ -365,14 +378,18 @@ func TestSeasonService_ConfigurePlayoffRules_FinishedRegularSeasonAllowsOwnerToS
 	seasonID := "season-1"
 
 	seasonRepo := &fakeSeasonRepo{
-		season: &domain.Season{
-			ID:       seasonID,
-			LeagueId: leagueID,
-			Name:     "Spring",
-			Status:   domain.SeasonStatusFinished,
-			Phase:    domain.SeasonPhaseRegularSeason,
-			Version:  1,
-		},
+		season: rehydratedSeason(
+			seasonID,
+			leagueID,
+			"Spring",
+			domain.SeasonStatusFinished,
+			domain.SeasonPhaseRegularSeason,
+			1,
+			nil,
+			nil,
+			nil,
+			nil,
+		),
 	}
 
 	service := &SeasonService{
@@ -399,11 +416,12 @@ func TestSeasonService_ConfigurePlayoffRules_FinishedRegularSeasonAllowsOwnerToS
 	if err != nil {
 		t.Fatalf("expected playoff rules to save for finished regular season, got %v", err)
 	}
-	if seasonRepo.season.PlayoffRules == nil {
+	qualifierCount, configured := seasonRepo.season.PlayoffQualifierCount()
+	if !configured || !seasonRepo.season.HasPlayoffRules() {
 		t.Fatalf("expected playoff rules to be stored on season")
 	}
-	if seasonRepo.season.PlayoffRules.QualifierCount != 4 {
-		t.Fatalf("expected qualifier count 4, got %d", seasonRepo.season.PlayoffRules.QualifierCount)
+	if qualifierCount != 4 {
+		t.Fatalf("expected qualifier count 4, got %d", qualifierCount)
 	}
 }
 
@@ -414,31 +432,32 @@ func TestSeasonService_ConfigurePlayoffRules_BeforePlayoffMatchPlayedClearsBrack
 	seasonID := "season-1"
 
 	seasonRepo := &fakeSeasonRepo{
-		season: &domain.Season{
-			ID:       seasonID,
-			LeagueId: leagueID,
-			Name:     "Spring",
-			Status:   domain.SeasonStatusInProgress,
-			Phase:    domain.SeasonPhasePlayoffs,
-			Version:  1,
-			PlayoffBracket: &domain.PlayoffBracket{
-				Rounds: []domain.PlayoffBracketRound{
-					{
-						Name:  "semifinal",
-						Order: 1,
-						Ties: []domain.PlayoffTie{
-							{
-								ID:     "tie-1",
-								Status: "ready",
-								Matches: []domain.Match{
-									{ID: "match-1", PlayoffTieID: "tie-1", MatchOrder: 1, HomeTeamID: "team-1", AwayTeamID: "team-4", Status: domain.MatchStatusScheduled},
-								},
+		season: rehydratedSeason(
+			seasonID,
+			leagueID,
+			"Spring",
+			domain.SeasonStatusInProgress,
+			domain.SeasonPhasePlayoffs,
+			1,
+			nil,
+			nil,
+			domain.RehydratePlayoffBracket([]domain.PlayoffBracketRoundSnapshot{
+				{
+					Name:  "semifinal",
+					Order: 1,
+					Ties: []domain.PlayoffTieSnapshot{
+						{
+							ID:     "tie-1",
+							Status: "ready",
+							Matches: []domain.MatchSnapshot{
+								domain.RehydrateMatch(domain.MatchState{ID: "match-1", PlayoffTieID: "tie-1", MatchOrder: 1, HomeTeamID: "team-1", AwayTeamID: "team-4", Status: domain.MatchStatusScheduled}).Snapshot(),
 							},
 						},
 					},
 				},
-			},
-		},
+			}),
+			nil,
+		),
 	}
 
 	service := &SeasonService{
@@ -464,11 +483,11 @@ func TestSeasonService_ConfigurePlayoffRules_BeforePlayoffMatchPlayedClearsBrack
 	if err != nil {
 		t.Fatalf("expected playoff rules to save before playoff matches are played, got %v", err)
 	}
-	if seasonRepo.season.PlayoffBracket != nil {
+	if seasonRepo.season.HasPlayoffBracket() {
 		t.Fatalf("expected existing playoff bracket to be cleared after rules change")
 	}
-	if seasonRepo.season.Phase != domain.SeasonPhaseRegularSeason {
-		t.Fatalf("expected season phase to return to regular_season, got %s", seasonRepo.season.Phase)
+	if seasonRepo.season.CurrentPhase() != domain.SeasonPhaseRegularSeason {
+		t.Fatalf("expected season phase to return to regular_season, got %s", seasonRepo.season.CurrentPhase())
 	}
 }
 
@@ -480,14 +499,18 @@ func TestSeasonService_ConfigurePlayoffRules_RejectsNonOwner(t *testing.T) {
 	seasonID := "season-1"
 
 	seasonRepo := &fakeSeasonRepo{
-		season: &domain.Season{
-			ID:       seasonID,
-			LeagueId: leagueID,
-			Name:     "Spring",
-			Status:   domain.SeasonStatusFinished,
-			Phase:    domain.SeasonPhaseRegularSeason,
-			Version:  1,
-		},
+		season: rehydratedSeason(
+			seasonID,
+			leagueID,
+			"Spring",
+			domain.SeasonStatusFinished,
+			domain.SeasonPhaseRegularSeason,
+			1,
+			nil,
+			nil,
+			nil,
+			nil,
+		),
 	}
 
 	service := &SeasonService{
@@ -533,44 +556,36 @@ func cloneSeason(in *domain.Season) *domain.Season {
 		return nil
 	}
 
-	rounds := make([]domain.Round, len(in.Rounds))
-	for i, round := range in.Rounds {
-		matches := make([]domain.Match, len(round.Matches))
-		copy(matches, round.Matches)
-		rounds[i] = domain.Round{
-			RoundNumber: round.RoundNumber,
-			Matches:     matches,
-		}
+	return domain.RehydrateSeasonFromSnapshot(in.Snapshot())
+}
+
+func rehydratedSeason(
+	id, leagueID, name string,
+	status domain.SeasonStatus,
+	phase domain.SeasonPhase,
+	version int,
+	rounds []domain.Round,
+	playoffRules *domain.PlayoffRulesSnapshot,
+	playoffBracket *domain.PlayoffBracketSnapshot,
+	championTeamID *string,
+) *domain.Season {
+	roundSnapshots := make([]domain.RoundSnapshot, len(rounds))
+	for i, round := range rounds {
+		roundSnapshots[i] = round.Snapshot()
 	}
 
-	out := *in
-	out.Rounds = rounds
-	if in.PlayoffRules != nil {
-		playoffRules := *in.PlayoffRules
-		playoffRounds := make([]domain.PlayoffRoundRule, len(in.PlayoffRules.Rounds))
-		copy(playoffRounds, in.PlayoffRules.Rounds)
-		playoffRules.Rounds = playoffRounds
-		out.PlayoffRules = &playoffRules
-	}
-	if in.PlayoffBracket != nil {
-		playoffRounds := make([]domain.PlayoffBracketRound, len(in.PlayoffBracket.Rounds))
-		for i, round := range in.PlayoffBracket.Rounds {
-			ties := make([]domain.PlayoffTie, len(round.Ties))
-			for j, tie := range round.Ties {
-				matches := make([]domain.Match, len(tie.Matches))
-				copy(matches, tie.Matches)
-				ties[j] = tie
-				ties[j].Matches = matches
-			}
-			playoffRounds[i] = domain.PlayoffBracketRound{
-				Name:  round.Name,
-				Order: round.Order,
-				Ties:  ties,
-			}
-		}
-		out.PlayoffBracket = &domain.PlayoffBracket{Rounds: playoffRounds}
-	}
-	return &out
+	return domain.RehydrateSeasonFromSnapshot(domain.SeasonSnapshot{
+		ID:             id,
+		LeagueID:       leagueID,
+		Name:           name,
+		Status:         status,
+		Phase:          phase,
+		Version:        version,
+		Rounds:         roundSnapshots,
+		PlayoffRules:   playoffRules,
+		PlayoffBracket: playoffBracket,
+		ChampionTeamID: championTeamID,
+	})
 }
 
 func stringPtr(value string) *string {

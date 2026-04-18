@@ -7,6 +7,19 @@ import (
 )
 
 type Match struct {
+	id               string
+	homeTeamID       string
+	awayTeamID       string
+	homeTeamScore    int
+	awayTeamScore    int
+	status           MatchStatus
+	assignedLocation MatchLocation
+	refereeID        string
+	playoffTieID     string
+	matchOrder       int
+}
+
+type MatchState struct {
 	ID               string
 	HomeTeamID       string
 	AwayTeamID       string
@@ -14,7 +27,20 @@ type Match struct {
 	AwayTeamScore    int
 	Status           MatchStatus
 	AssignedLocation MatchLocation
-	RefereeID        string // New field to track assigned referee
+	RefereeID        string
+	PlayoffTieID     string
+	MatchOrder       int
+}
+
+type MatchSnapshot struct {
+	ID               string
+	HomeTeamID       string
+	AwayTeamID       string
+	HomeTeamScore    int
+	AwayTeamScore    int
+	Status           MatchStatus
+	AssignedLocation MatchLocation
+	RefereeID        string
 	PlayoffTieID     string
 	MatchOrder       int
 }
@@ -44,27 +70,57 @@ func NewMatch(matchID *string, homeTeamID, awayTeamID string) (Match, error) {
 	}
 
 	return Match{
-		ID:            id,
-		HomeTeamID:    homeTeamID,
-		AwayTeamID:    awayTeamID,
-		HomeTeamScore: 0,
-		AwayTeamScore: 0,
-		Status:        MatchStatusScheduled,
+		id:            id,
+		homeTeamID:    homeTeamID,
+		awayTeamID:    awayTeamID,
+		homeTeamScore: 0,
+		awayTeamScore: 0,
+		status:        MatchStatusScheduled,
 	}, nil
 }
 
+func RehydrateMatch(state MatchState) Match {
+	return Match{
+		id:               state.ID,
+		homeTeamID:       state.HomeTeamID,
+		awayTeamID:       state.AwayTeamID,
+		homeTeamScore:    state.HomeTeamScore,
+		awayTeamScore:    state.AwayTeamScore,
+		status:           state.Status,
+		assignedLocation: state.AssignedLocation,
+		refereeID:        state.RefereeID,
+		playoffTieID:     state.PlayoffTieID,
+		matchOrder:       state.MatchOrder,
+	}
+}
+
+func (m Match) Snapshot() MatchSnapshot {
+	return MatchSnapshot{
+		ID:               m.id,
+		HomeTeamID:       m.homeTeamID,
+		AwayTeamID:       m.awayTeamID,
+		HomeTeamScore:    m.homeTeamScore,
+		AwayTeamScore:    m.awayTeamScore,
+		Status:           m.status,
+		AssignedLocation: m.assignedLocation,
+		RefereeID:        m.refereeID,
+		PlayoffTieID:     m.playoffTieID,
+		MatchOrder:       m.matchOrder,
+	}
+}
+
 func (m *Match) GetHomeTeam() interface{} {
-	if m.HomeTeamID == "bye" {
+	if m.homeTeamID == "bye" {
 		return nil
 	}
-	return m.HomeTeamID
+	return m.homeTeamID
 }
 
 func (m *Match) GetAwayTeam() interface{} {
-	if m.AwayTeamID == "bye" {
+	if m.awayTeamID == "bye" {
 		return nil
 	}
-	return m.AwayTeamID
+	return m.awayTeamID
 }
 
 func (m *Match) ChangeScore(homeTeamScore, awayTeamScore int) (*Match, error) {
@@ -77,16 +133,16 @@ func (m *Match) ChangeScore(homeTeamScore, awayTeamScore int) (*Match, error) {
 	}
 
 	log.Print(m)
-	if m.HomeTeamID == "bye" || m.AwayTeamID == "bye" {
+	if m.homeTeamID == "bye" || m.awayTeamID == "bye" {
 		return nil, errors.New("cannot change score of match for a bye week")
 	}
-	if m.Status != MatchStatusInProgress {
+	if m.status != MatchStatusInProgress {
 		return nil, errors.New("cannot change score for match not in current round")
 	}
 
 	newMatch := *m
-	newMatch.AwayTeamScore = awayTeamScore
-	newMatch.HomeTeamScore = homeTeamScore
+	newMatch.awayTeamScore = awayTeamScore
+	newMatch.homeTeamScore = homeTeamScore
 
 	return &newMatch, nil
 }
