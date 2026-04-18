@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"league-management/internal/organization_management/domain"
+	"league-management/internal/organization_management/domain/organization"
 	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/database"
 	"time"
@@ -18,7 +18,7 @@ func NewOrganizationRepository() *OrganizationRepository {
 	return &OrganizationRepository{}
 }
 
-func (or *OrganizationRepository) FindByName(orgName string, ownerID string) (*domain.Organization, error) {
+func (or *OrganizationRepository) FindByName(orgName string, ownerID string) (*organization.Organization, error) {
 	connection := database.GetConnection()
 
 	sql := "SELECT id, name, user_id, created_at, updated_at FROM league_management.organizations where name=$1 AND user_id=$2"
@@ -38,10 +38,10 @@ func (or *OrganizationRepository) FindByName(orgName string, ownerID string) (*d
 		panic(err)
 	}
 
-	return &domain.Organization{Name: name, ID: &id, OrganizationOwnerId: ownerId}, nil
+	return &organization.Organization{Name: name, ID: &id, OrganizationOwnerId: ownerId}, nil
 }
 
-func (or *OrganizationRepository) FindById(orgId string) (*domain.Organization, error) {
+func (or *OrganizationRepository) FindById(orgId string) (*organization.Organization, error) {
 	connection := database.GetConnection()
 
 	var id string
@@ -61,11 +61,11 @@ func (or *OrganizationRepository) FindById(orgId string) (*domain.Organization, 
 		panic(err)
 	}
 
-	organization := domain.NewOrganization(&id, name, ownerId, true)
-	return &organization, nil
+	foundOrganization := organization.NewOrganization(&id, name, ownerId, true)
+	return &foundOrganization, nil
 }
 
-func (ur *OrganizationRepository) Save(o *domain.Organization) error {
+func (ur *OrganizationRepository) Save(o *organization.Organization) error {
 	pool := database.GetConnection()
 
 	sql := "INSERT INTO league_management.organizations (name, user_id) VALUES ($1, $2)"
@@ -81,7 +81,7 @@ func (ur *OrganizationRepository) Save(o *domain.Organization) error {
 	return err
 }
 
-func (ur *OrganizationRepository) FetchAll(orgOwnerId string) ([]domain.Organization, error) {
+func (ur *OrganizationRepository) FetchAll(orgOwnerId string) ([]organization.Organization, error) {
 	pool := database.GetConnection()
 	sql := "SELECT id, name, user_id FROM league_management.organizations where user_id=$1"
 
@@ -93,7 +93,7 @@ func (ur *OrganizationRepository) FetchAll(orgOwnerId string) ([]domain.Organiza
 
 	defer rows.Close()
 
-	var organizations []domain.Organization
+	var organizations []organization.Organization
 
 	for rows.Next() {
 		var id, name, organizationOwnerId string
@@ -103,8 +103,8 @@ func (ur *OrganizationRepository) FetchAll(orgOwnerId string) ([]domain.Organiza
 			return nil, err
 		}
 
-		organization := domain.NewOrganization(&id, name, organizationOwnerId, isActive)
-		organizations = append(organizations, organization)
+		foundOrganization := organization.NewOrganization(&id, name, organizationOwnerId, isActive)
+		organizations = append(organizations, foundOrganization)
 	}
 
 	if rows.Err() != nil {

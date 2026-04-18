@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"league-management/internal/organization_management/domain"
+	"league-management/internal/organization_management/domain/league"
 	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/database"
 	"league-management/internal/shared/dtos"
@@ -21,14 +21,14 @@ func NewLeagueRepository() *LeagueRepository {
 	return &LeagueRepository{}
 }
 
-func (lr *LeagueRepository) FindById(leagueId string) (*domain.League, error) {
+func (lr *LeagueRepository) FindById(leagueId string) (*league.League, error) {
 	return lr.findByIdTx(context.Background(), database.GetConnection(), leagueId, false)
 }
 
 func (lr *LeagueRepository) findByIdTx(ctx context.Context, querier interface {
 	QueryRow(context.Context, string, ...interface{}) pgx.Row
 	Query(context.Context, string, ...interface{}) (pgx.Rows, error)
-}, leagueId string, forUpdate bool) (*domain.League, error) {
+}, leagueId string, forUpdate bool) (*league.League, error) {
 	sql := `SELECT 
     		leagues.id,
     		leagues.name,
@@ -83,7 +83,7 @@ func (lr *LeagueRepository) findByIdTx(ctx context.Context, querier interface {
 	}
 	defer rows.Close()
 
-	memberships := []domain.LeagueMembership{}
+	memberships := []league.Membership{}
 
 	for rows.Next() {
 		var id string
@@ -91,10 +91,10 @@ func (lr *LeagueRepository) findByIdTx(ctx context.Context, querier interface {
 		if err := rows.Scan(&id, &teamId); err != nil {
 
 		}
-		memberships = append(memberships, domain.LeagueMembership{ID: id, TeamID: teamId})
+		memberships = append(memberships, league.Membership{ID: id, TeamID: teamId})
 	}
 
-	league := domain.League{
+	foundLeague := league.League{
 		Id:             &id,
 		Name:           name,
 		OwnerId:        ownerId,
@@ -104,13 +104,13 @@ func (lr *LeagueRepository) findByIdTx(ctx context.Context, querier interface {
 	}
 
 	if seasonId != nil {
-		league.ActiveSeason = *seasonId
+		foundLeague.ActiveSeason = *seasonId
 	}
 
-	return &league, nil
+	return &foundLeague, nil
 }
 
-func (lr *LeagueRepository) WithLockedLeague(leagueId string, fn func(league *domain.League) error) error {
+func (lr *LeagueRepository) WithLockedLeague(leagueId string, fn func(league *league.League) error) error {
 	return database.WithTx(context.Background(), func(tx pgx.Tx) error {
 		league, err := lr.findByIdTx(context.Background(), tx, leagueId, true)
 		if err != nil {
@@ -125,7 +125,7 @@ func (lr *LeagueRepository) WithLockedLeague(leagueId string, fn func(league *do
 	})
 }
 
-func (lr *LeagueRepository) Save(league *domain.League) error {
+func (lr *LeagueRepository) Save(league *league.League) error {
 	updateID := *league.Id
 	if updateID == "" {
 		if err := insertIntoLeagues(league); err != nil {
@@ -140,7 +140,7 @@ func (lr *LeagueRepository) Save(league *domain.League) error {
 	return nil
 }
 
-func insertIntoLeagues(league *domain.League) error {
+func insertIntoLeagues(league *league.League) error {
 	connection := database.GetConnection()
 
 	sql := `INSERT INTO leagues (name, user_id, organization_id) VALUES ($1, $2, $3);`
@@ -158,13 +158,13 @@ func insertIntoLeagues(league *domain.League) error {
 	return nil
 }
 
-func updateLeague(league *domain.League) error {
+func updateLeague(league *league.League) error {
 	return (&LeagueRepository{}).saveTx(context.Background(), database.GetConnection(), league)
 }
 
 func (lr *LeagueRepository) saveTx(ctx context.Context, tx interface {
 	Exec(context.Context, string, ...interface{}) (pgconn.CommandTag, error)
-}, league *domain.League) error {
+}, league *league.League) error {
 	sql := `UPDATE league_management.leagues SET name=$1, user_id=$2 WHERE id = $3;`
 
 	_, err := tx.Exec(ctx, sql, league.Name, league.OwnerId, *league.Id)
@@ -375,7 +375,7 @@ func (lr *LeagueRepository) FetchLeagueMembers(leagueId string) ([]interface{}, 
 	return results, nil
 }
 
-func (lr *LeagueRepository) FetchLeagueDetails(league domain.League) (map[string]interface{}, error) {
+func (lr *LeagueRepository) FetchLeagueDetails(league league.League) (map[string]interface{}, error) {
 	connection := database.GetConnection()
 
 	sql := `SELECT 

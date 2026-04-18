@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-	"league-management/internal/organization_management/domain"
+	"league-management/internal/organization_management/domain/organization"
 	userdomain "league-management/internal/user_management/domain"
 )
 
@@ -12,10 +12,10 @@ type OrganizationService struct {
 }
 
 type organizationRepository interface {
-	FindByName(string, string) (*domain.Organization, error)
-	FindById(string) (*domain.Organization, error)
-	Save(*domain.Organization) error
-	FetchAll(string) ([]domain.Organization, error)
+	FindByName(string, string) (*organization.Organization, error)
+	FindById(string) (*organization.Organization, error)
+	Save(*organization.Organization) error
+	FetchAll(string) ([]organization.Organization, error)
 }
 
 type organizationUserFinder interface {
@@ -29,7 +29,7 @@ func NewOrganizationService(organizationRepo organizationRepository, userRepo or
 	}
 }
 
-func (os *OrganizationService) FetchOrganizations(ownerId string) ([]domain.Organization, error) {
+func (os *OrganizationService) FetchOrganizations(ownerId string) ([]organization.Organization, error) {
 
 	// this needs to be an adapter
 	// we are using the repo from another bounded context
@@ -58,9 +58,9 @@ func (os *OrganizationService) OpenNewOrganization(organizationOwner string, org
 		return errors.New("organization already exists with name")
 	}
 
-	organization := domain.NewOrganization(nil, orgName, organizationOwner, true)
+	newOrganization := organization.NewOrganization(nil, orgName, organizationOwner, true)
 
-	err := os.organizationRepo.Save(&organization)
+	err := os.organizationRepo.Save(&newOrganization)
 	if err != nil {
 		return err
 	}

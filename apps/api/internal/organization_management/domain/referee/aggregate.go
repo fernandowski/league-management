@@ -1,4 +1,4 @@
-package domain
+package referee
 
 type Referee struct {
 	ID   string

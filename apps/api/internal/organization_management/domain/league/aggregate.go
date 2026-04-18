@@ -1,4 +1,4 @@
-package domain
+package league
 
 import (
 	"errors"
@@ -11,17 +11,17 @@ type League struct {
 	OwnerId        string
 	OrganizationId string
 	ActiveSeason   string
-	Memberships    []LeagueMembership
+	Memberships    []Membership
 }
 
 func NewLeague(id string, name string, ownerId string, organizationId string) League {
 	return League{
-		Id: &id, Name: name, OwnerId: ownerId, OrganizationId: organizationId, Memberships: []LeagueMembership{},
+		Id: &id, Name: name, OwnerId: ownerId, OrganizationId: organizationId, Memberships: []Membership{},
 	}
 }
 
-func (l *League) StartTeamMembership(teamId string) (*LeagueMembership, error) {
-	newLeagueMembership, err := NewLeagueMembership(uuid.New().String(), teamId)
+func (l *League) StartTeamMembership(teamId string) (*Membership, error) {
+	newLeagueMembership, err := NewMembership(uuid.New().String(), teamId)
 
 	if _, err := newLeagueMembership.Activate(); err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func (l *League) RemoveMembership(membershipId string) (*League, error) {
 	}
 
 	league := l
-	memberships := []LeagueMembership{}
+	memberships := []Membership{}
 
 	for _, membership := range l.Memberships {
 		if membership.ID != membershipId {

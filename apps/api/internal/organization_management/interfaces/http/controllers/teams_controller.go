@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/kataras/iris/v12"
 	"league-management/internal/organization_management/application/services"
-	"league-management/internal/organization_management/domain"
+	"league-management/internal/organization_management/domain/team"
 	domain2 "league-management/internal/user_management/domain"
 )
 
@@ -38,7 +38,7 @@ func (tc *TeamsController) MakeTeam(ctx iris.Context) {
 		return
 	}
 
-	err := tc.teamService.Make(domain.TeamName(createDto.Name), authenticatedUser.Id, createDto.OrganizationId)
+	err := tc.teamService.Make(team.TeamName(createDto.Name), authenticatedUser.Id, createDto.OrganizationId)
 
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)

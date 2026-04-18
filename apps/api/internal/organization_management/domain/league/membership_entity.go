@@ -1,4 +1,4 @@
-package domain
+package league
 
 import "errors"
 
@@ -10,25 +10,25 @@ const (
 	MembershipInactive  MembershipStatus = "Inactive"
 )
 
-type LeagueMembership struct {
+type Membership struct {
 	ID               string
 	TeamID           string
 	MemberShipStatus MembershipStatus
 }
 
-func NewLeagueMembership(MembershipId string, teamID string) (LeagueMembership, error) {
-	return LeagueMembership{
+func NewMembership(MembershipId string, teamID string) (Membership, error) {
+	return Membership{
 		ID:               MembershipId,
 		TeamID:           teamID,
 		MemberShipStatus: MembershipInactive,
 	}, nil
 }
 
-func (lm *LeagueMembership) Activate() (LeagueMembership, error) {
+func (lm *Membership) Activate() (Membership, error) {
 
 	if lm.MemberShipStatus == MembershipActive {
-		return LeagueMembership{}, errors.New("membership already in active state")
+		return Membership{}, errors.New("membership already in active state")
 	}
 
-	return LeagueMembership{ID: lm.ID, TeamID: lm.TeamID, MemberShipStatus: MembershipActive}, nil
+	return Membership{ID: lm.ID, TeamID: lm.TeamID, MemberShipStatus: MembershipActive}, nil
 }

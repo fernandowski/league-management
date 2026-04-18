@@ -1,4 +1,4 @@
-package domain
+package season
 
 type Round struct {
 	roundNumber int

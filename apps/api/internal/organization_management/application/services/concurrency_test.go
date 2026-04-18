@@ -2,7 +2,10 @@ package services
 
 import (
 	"errors"
-	"league-management/internal/organization_management/domain"
+	leaguepkg "league-management/internal/organization_management/domain/league"
+	organizationpkg "league-management/internal/organization_management/domain/organization"
+	seasonpkg "league-management/internal/organization_management/domain/season"
+	teampkg "league-management/internal/organization_management/domain/team"
 	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/dtos"
 	user_domain "league-management/internal/user_management/domain"
@@ -23,10 +26,10 @@ func (r *fakeUserRepo) FindById(id string) (*user_domain.User, error) {
 }
 
 type fakeOrganizationRepo struct {
-	organizations map[string]*domain.Organization
+	organizations map[string]*organizationpkg.Organization
 }
 
-func (r *fakeOrganizationRepo) FindById(id string) (*domain.Organization, error) {
+func (r *fakeOrganizationRepo) FindById(id string) (*organizationpkg.Organization, error) {
 	org, ok := r.organizations[id]
 	if !ok {
 		return nil, errors.New("not found")
@@ -35,10 +38,10 @@ func (r *fakeOrganizationRepo) FindById(id string) (*domain.Organization, error)
 }
 
 type fakeTeamRepo struct {
-	teams map[string]*domain.Team
+	teams map[string]*teampkg.Team
 }
 
-func (r *fakeTeamRepo) FindById(id string) (*domain.Team, error) {
+func (r *fakeTeamRepo) FindById(id string) (*teampkg.Team, error) {
 	team, ok := r.teams[id]
 	if !ok {
 		return nil, errors.New("not found")
@@ -48,16 +51,16 @@ func (r *fakeTeamRepo) FindById(id string) (*domain.Team, error) {
 
 type fakeLeagueRepo struct {
 	mu     sync.Mutex
-	league *domain.League
+	league *leaguepkg.League
 }
 
-func (r *fakeLeagueRepo) FindById(id string) (*domain.League, error) {
+func (r *fakeLeagueRepo) FindById(id string) (*leaguepkg.League, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return cloneLeague(r.league), nil
 }
 
-func (r *fakeLeagueRepo) Save(*domain.League) error {
+func (r *fakeLeagueRepo) Save(*leaguepkg.League) error {
 	return nil
 }
 
@@ -69,11 +72,11 @@ func (r *fakeLeagueRepo) FetchLeagueMembers(string) ([]interface{}, error) {
 	return nil, nil
 }
 
-func (r *fakeLeagueRepo) FetchLeagueDetails(domain.League) (map[string]interface{}, error) {
+func (r *fakeLeagueRepo) FetchLeagueDetails(leaguepkg.League) (map[string]interface{}, error) {
 	return nil, nil
 }
 
-func (r *fakeLeagueRepo) WithLockedLeague(_ string, fn func(*domain.League) error) error {
+func (r *fakeLeagueRepo) WithLockedLeague(_ string, fn func(*leaguepkg.League) error) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -88,13 +91,13 @@ func (r *fakeLeagueRepo) WithLockedLeague(_ string, fn func(*domain.League) erro
 
 type fakeSeasonRepo struct {
 	mu                sync.Mutex
-	season            *domain.Season
+	season            *seasonpkg.Season
 	findBarrierTarget int
 	findBarrierCount  int
 	findBarrier       chan struct{}
 }
 
-func (r *fakeSeasonRepo) FindByID(string) (*domain.Season, error) {
+func (r *fakeSeasonRepo) FindByID(string) (*seasonpkg.Season, error) {
 	r.mu.Lock()
 	season := cloneSeason(r.season)
 	if r.findBarrierTarget > 0 {
@@ -111,7 +114,7 @@ func (r *fakeSeasonRepo) FindByID(string) (*domain.Season, error) {
 	return season, nil
 }
 
-func (r *fakeSeasonRepo) Save(season *domain.Season) error {
+func (r *fakeSeasonRepo) Save(season *seasonpkg.Season) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -119,7 +122,7 @@ func (r *fakeSeasonRepo) Save(season *domain.Season) error {
 		r.season = cloneSeason(season)
 		snapshot := r.season.Snapshot()
 		snapshot.Version = 1
-		r.season = domain.RehydrateSeasonFromSnapshot(snapshot)
+		r.season = seasonpkg.RehydrateSeasonFromSnapshot(snapshot)
 		r.season.ApplyPersistedVersion(1)
 		return nil
 	}
@@ -131,7 +134,7 @@ func (r *fakeSeasonRepo) Save(season *domain.Season) error {
 	next := cloneSeason(season)
 	snapshot := next.Snapshot()
 	snapshot.Version = next.CurrentVersion() + 1
-	r.season = domain.RehydrateSeasonFromSnapshot(snapshot)
+	r.season = seasonpkg.RehydrateSeasonFromSnapshot(snapshot)
 	r.season.ApplyPersistedVersion(next.CurrentVersion() + 1)
 	return nil
 }
@@ -157,10 +160,10 @@ func (r *fakeSeasonRepo) FetchPlayoffBracket(string) (map[string]interface{}, er
 }
 
 type fakeSeasonLeagueRepo struct {
-	league *domain.League
+	league *leaguepkg.League
 }
 
-func (r *fakeSeasonLeagueRepo) FindById(string) (*domain.League, error) {
+func (r *fakeSeasonLeagueRepo) FindById(string) (*leaguepkg.League, error) {
 	return cloneLeague(r.league), nil
 }
 
@@ -168,26 +171,26 @@ func TestLeagueService_InitiateTeamMembership_ConcurrentAddsKeepBothMemberships(
 	ownerID := "owner-1"
 	orgID := "org-1"
 	leagueID := "league-1"
-	team1ID := domain.TeamId("team-1")
-	team2ID := domain.TeamId("team-2")
+	team1ID := teampkg.TeamId("team-1")
+	team2ID := teampkg.TeamId("team-2")
 
 	service := &LeagueService{
 		leagueRepository: &fakeLeagueRepo{
-			league: &domain.League{
+			league: &leaguepkg.League{
 				Id:             stringPtr(leagueID),
 				Name:           "Summer League",
 				OwnerId:        ownerID,
 				OrganizationId: orgID,
-				Memberships:    []domain.LeagueMembership{},
+				Memberships:    []leaguepkg.Membership{},
 			},
 		},
 		organizationRepo: &fakeOrganizationRepo{
-			organizations: map[string]*domain.Organization{
+			organizations: map[string]*organizationpkg.Organization{
 				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
 			},
 		},
 		teamRepository: &fakeTeamRepo{
-			teams: map[string]*domain.Team{
+			teams: map[string]*teampkg.Team{
 				string(team1ID): {ID: &team1ID, Name: "Team 1", OrganizationId: orgID},
 				string(team2ID): {ID: &team2ID, Name: "Team 2", OrganizationId: orgID},
 			},
@@ -236,11 +239,11 @@ func TestSeasonService_StartSeason_ConcurrentStartConflictsOnVersion(t *testing.
 			seasonID,
 			leagueID,
 			"Spring",
-			domain.SeasonStatusPlanned,
+			seasonpkg.SeasonStatusPlanned,
 			"",
 			1,
-			[]domain.Round{
-				domain.RehydrateRound(1, []domain.Match{domain.RehydrateMatch(domain.MatchState{ID: "match-1", HomeTeamID: "team-1", AwayTeamID: "team-2"})}),
+			[]seasonpkg.Round{
+				seasonpkg.RehydrateRound(1, []seasonpkg.Match{seasonpkg.RehydrateMatch(seasonpkg.MatchState{ID: "match-1", HomeTeamID: "team-1", AwayTeamID: "team-2"})}),
 			},
 			nil,
 			nil,
@@ -253,10 +256,10 @@ func TestSeasonService_StartSeason_ConcurrentStartConflictsOnVersion(t *testing.
 	service := &SeasonService{
 		seasonRepository: seasonRepo,
 		leagueRepository: &fakeSeasonLeagueRepo{
-			league: &domain.League{Id: stringPtr(leagueID), OrganizationId: orgID},
+			league: &leaguepkg.League{Id: stringPtr(leagueID), OrganizationId: orgID},
 		},
 		organizationRepo: &fakeOrganizationRepo{
-			organizations: map[string]*domain.Organization{
+			organizations: map[string]*organizationpkg.Organization{
 				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
 			},
 		},
@@ -292,7 +295,7 @@ func TestSeasonService_StartSeason_ConcurrentStartConflictsOnVersion(t *testing.
 	if successes != 1 || conflicts != 1 {
 		t.Fatalf("expected one success and one concurrency conflict, got successes=%d conflicts=%d", successes, conflicts)
 	}
-	if seasonRepo.season.CurrentStatus() != domain.SeasonStatusInProgress {
+	if seasonRepo.season.CurrentStatus() != seasonpkg.SeasonStatusInProgress {
 		t.Fatalf("expected final season status to be in_progress, got %s", seasonRepo.season.CurrentStatus())
 	}
 }
@@ -309,11 +312,11 @@ func TestSeasonService_ChangeMatchScore_ConcurrentUpdatesConflictOnVersion(t *te
 			seasonID,
 			leagueID,
 			"Spring",
-			domain.SeasonStatusInProgress,
+			seasonpkg.SeasonStatusInProgress,
 			"",
 			1,
-			[]domain.Round{
-				domain.RehydrateRound(1, []domain.Match{domain.RehydrateMatch(domain.MatchState{ID: matchID, HomeTeamID: "team-1", AwayTeamID: "team-2", Status: domain.MatchStatusInProgress})}),
+			[]seasonpkg.Round{
+				seasonpkg.RehydrateRound(1, []seasonpkg.Match{seasonpkg.RehydrateMatch(seasonpkg.MatchState{ID: matchID, HomeTeamID: "team-1", AwayTeamID: "team-2", Status: seasonpkg.MatchStatusInProgress})}),
 			},
 			nil,
 			nil,
@@ -326,10 +329,10 @@ func TestSeasonService_ChangeMatchScore_ConcurrentUpdatesConflictOnVersion(t *te
 	service := &SeasonService{
 		seasonRepository: seasonRepo,
 		leagueRepository: &fakeSeasonLeagueRepo{
-			league: &domain.League{Id: stringPtr(leagueID), OrganizationId: orgID},
+			league: &leaguepkg.League{Id: stringPtr(leagueID), OrganizationId: orgID},
 		},
 		organizationRepo: &fakeOrganizationRepo{
-			organizations: map[string]*domain.Organization{
+			organizations: map[string]*organizationpkg.Organization{
 				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
 			},
 		},
@@ -382,8 +385,8 @@ func TestSeasonService_ConfigurePlayoffRules_FinishedRegularSeasonAllowsOwnerToS
 			seasonID,
 			leagueID,
 			"Spring",
-			domain.SeasonStatusFinished,
-			domain.SeasonPhaseRegularSeason,
+			seasonpkg.SeasonStatusFinished,
+			seasonpkg.SeasonPhaseRegularSeason,
 			1,
 			nil,
 			nil,
@@ -395,10 +398,10 @@ func TestSeasonService_ConfigurePlayoffRules_FinishedRegularSeasonAllowsOwnerToS
 	service := &SeasonService{
 		seasonRepository: seasonRepo,
 		leagueRepository: &fakeSeasonLeagueRepo{
-			league: &domain.League{Id: stringPtr(leagueID), OrganizationId: orgID},
+			league: &leaguepkg.League{Id: stringPtr(leagueID), OrganizationId: orgID},
 		},
 		organizationRepo: &fakeOrganizationRepo{
-			organizations: map[string]*domain.Organization{
+			organizations: map[string]*organizationpkg.Organization{
 				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
 			},
 		},
@@ -436,21 +439,21 @@ func TestSeasonService_ConfigurePlayoffRules_BeforePlayoffMatchPlayedClearsBrack
 			seasonID,
 			leagueID,
 			"Spring",
-			domain.SeasonStatusInProgress,
-			domain.SeasonPhasePlayoffs,
+			seasonpkg.SeasonStatusInProgress,
+			seasonpkg.SeasonPhasePlayoffs,
 			1,
 			nil,
 			nil,
-			domain.RehydratePlayoffBracket([]domain.PlayoffBracketRoundSnapshot{
+			seasonpkg.RehydratePlayoffBracket([]seasonpkg.PlayoffBracketRoundSnapshot{
 				{
 					Name:  "semifinal",
 					Order: 1,
-					Ties: []domain.PlayoffTieSnapshot{
+					Ties: []seasonpkg.PlayoffTieSnapshot{
 						{
 							ID:     "tie-1",
 							Status: "ready",
-							Matches: []domain.MatchSnapshot{
-								domain.RehydrateMatch(domain.MatchState{ID: "match-1", PlayoffTieID: "tie-1", MatchOrder: 1, HomeTeamID: "team-1", AwayTeamID: "team-4", Status: domain.MatchStatusScheduled}).Snapshot(),
+							Matches: []seasonpkg.MatchSnapshot{
+								seasonpkg.RehydrateMatch(seasonpkg.MatchState{ID: "match-1", PlayoffTieID: "tie-1", MatchOrder: 1, HomeTeamID: "team-1", AwayTeamID: "team-4", Status: seasonpkg.MatchStatusScheduled}).Snapshot(),
 							},
 						},
 					},
@@ -463,10 +466,10 @@ func TestSeasonService_ConfigurePlayoffRules_BeforePlayoffMatchPlayedClearsBrack
 	service := &SeasonService{
 		seasonRepository: seasonRepo,
 		leagueRepository: &fakeSeasonLeagueRepo{
-			league: &domain.League{Id: stringPtr(leagueID), OrganizationId: orgID},
+			league: &leaguepkg.League{Id: stringPtr(leagueID), OrganizationId: orgID},
 		},
 		organizationRepo: &fakeOrganizationRepo{
-			organizations: map[string]*domain.Organization{
+			organizations: map[string]*organizationpkg.Organization{
 				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
 			},
 		},
@@ -486,7 +489,7 @@ func TestSeasonService_ConfigurePlayoffRules_BeforePlayoffMatchPlayedClearsBrack
 	if seasonRepo.season.HasPlayoffBracket() {
 		t.Fatalf("expected existing playoff bracket to be cleared after rules change")
 	}
-	if seasonRepo.season.CurrentPhase() != domain.SeasonPhaseRegularSeason {
+	if seasonRepo.season.CurrentPhase() != seasonpkg.SeasonPhaseRegularSeason {
 		t.Fatalf("expected season phase to return to regular_season, got %s", seasonRepo.season.CurrentPhase())
 	}
 }
@@ -503,8 +506,8 @@ func TestSeasonService_ConfigurePlayoffRules_RejectsNonOwner(t *testing.T) {
 			seasonID,
 			leagueID,
 			"Spring",
-			domain.SeasonStatusFinished,
-			domain.SeasonPhaseRegularSeason,
+			seasonpkg.SeasonStatusFinished,
+			seasonpkg.SeasonPhaseRegularSeason,
 			1,
 			nil,
 			nil,
@@ -516,10 +519,10 @@ func TestSeasonService_ConfigurePlayoffRules_RejectsNonOwner(t *testing.T) {
 	service := &SeasonService{
 		seasonRepository: seasonRepo,
 		leagueRepository: &fakeSeasonLeagueRepo{
-			league: &domain.League{Id: stringPtr(leagueID), OrganizationId: orgID},
+			league: &leaguepkg.League{Id: stringPtr(leagueID), OrganizationId: orgID},
 		},
 		organizationRepo: &fakeOrganizationRepo{
-			organizations: map[string]*domain.Organization{
+			organizations: map[string]*organizationpkg.Organization{
 				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
 			},
 		},
@@ -538,12 +541,12 @@ func TestSeasonService_ConfigurePlayoffRules_RejectsNonOwner(t *testing.T) {
 	}
 }
 
-func cloneLeague(in *domain.League) *domain.League {
+func cloneLeague(in *leaguepkg.League) *leaguepkg.League {
 	if in == nil {
 		return nil
 	}
 
-	memberships := make([]domain.LeagueMembership, len(in.Memberships))
+	memberships := make([]leaguepkg.Membership, len(in.Memberships))
 	copy(memberships, in.Memberships)
 
 	out := *in
@@ -551,30 +554,30 @@ func cloneLeague(in *domain.League) *domain.League {
 	return &out
 }
 
-func cloneSeason(in *domain.Season) *domain.Season {
+func cloneSeason(in *seasonpkg.Season) *seasonpkg.Season {
 	if in == nil {
 		return nil
 	}
 
-	return domain.RehydrateSeasonFromSnapshot(in.Snapshot())
+	return seasonpkg.RehydrateSeasonFromSnapshot(in.Snapshot())
 }
 
 func rehydratedSeason(
 	id, leagueID, name string,
-	status domain.SeasonStatus,
-	phase domain.SeasonPhase,
+	status seasonpkg.SeasonStatus,
+	phase seasonpkg.SeasonPhase,
 	version int,
-	rounds []domain.Round,
-	playoffRules *domain.PlayoffRulesSnapshot,
-	playoffBracket *domain.PlayoffBracketSnapshot,
+	rounds []seasonpkg.Round,
+	playoffRules *seasonpkg.PlayoffRulesSnapshot,
+	playoffBracket *seasonpkg.PlayoffBracketSnapshot,
 	championTeamID *string,
-) *domain.Season {
-	roundSnapshots := make([]domain.RoundSnapshot, len(rounds))
+) *seasonpkg.Season {
+	roundSnapshots := make([]seasonpkg.RoundSnapshot, len(rounds))
 	for i, round := range rounds {
 		roundSnapshots[i] = round.Snapshot()
 	}
 
-	return domain.RehydrateSeasonFromSnapshot(domain.SeasonSnapshot{
+	return seasonpkg.RehydrateSeasonFromSnapshot(seasonpkg.SeasonSnapshot{
 		ID:             id,
 		LeagueID:       leagueID,
 		Name:           name,

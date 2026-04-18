@@ -1,4 +1,4 @@
-package domain
+package season
 
 type MatchLocation struct {
 	Name string

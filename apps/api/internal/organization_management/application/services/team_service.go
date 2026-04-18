@@ -1,8 +1,8 @@
 package services
 
 import (
-	"league-management/internal/organization_management/domain"
-	"league-management/internal/organization_management/domain/domainservices"
+	domainservices "league-management/internal/organization_management/domain/services"
+	"league-management/internal/organization_management/domain/team"
 	userdomain "league-management/internal/user_management/domain"
 )
 
@@ -13,9 +13,9 @@ type TeamService struct {
 }
 
 type teamStore interface {
-	Save(*domain.Team) error
+	Save(*team.Team) error
 	Search(string, string, string) []interface{}
-	FindById(string) (*domain.Team, error)
+	FindById(string) (*team.Team, error)
 }
 
 type teamUserFinder interface {
@@ -30,7 +30,7 @@ func NewTeamService(teamRepository teamStore, organizationRepo organizationFinde
 	}
 }
 
-func (ts *TeamService) Make(teamName domain.TeamName, userId string, organizationId string) error {
+func (ts *TeamService) Make(teamName team.TeamName, userId string, organizationId string) error {
 	user, err := ts.userRepo.FindById(userId)
 
 	if err != nil {

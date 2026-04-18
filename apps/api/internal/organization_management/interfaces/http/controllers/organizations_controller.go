@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/kataras/iris/v12"
 	"league-management/internal/organization_management/application/services"
-	"league-management/internal/organization_management/domain"
+	"league-management/internal/organization_management/domain/organization"
 	domain2 "league-management/internal/user_management/domain"
 )
 
@@ -24,13 +24,13 @@ type organizationResponseDto struct {
 	Name string `json:"name"`
 }
 
-func toOrganizationDto(organization domain.Organization) organizationResponseDto {
+func toOrganizationDto(organization organization.Organization) organizationResponseDto {
 	return organizationResponseDto{
 		Id:   *organization.ID,
 		Name: organization.Name,
 	}
 }
-func organizationToRequestResponse(organizations []domain.Organization) []organizationResponseDto {
+func organizationToRequestResponse(organizations []organization.Organization) []organizationResponseDto {
 	dto := make([]organizationResponseDto, len(organizations))
 
 	for i, organization := range organizations {

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"league-management/internal/organization_management/domain"
+	"league-management/internal/organization_management/domain/team"
 	"league-management/internal/shared/database"
 	"strings"
 )
@@ -17,7 +17,7 @@ func NewTeamRepository() *TeamRepository {
 	return &TeamRepository{}
 }
 
-func (tr *TeamRepository) Save(team *domain.Team) error {
+func (tr *TeamRepository) Save(team *team.Team) error {
 	return database.WithTx(context.Background(), func(tx pgx.Tx) error {
 		sql := "INSERT INTO league_management.teams (name) VALUES ($1) RETURNING id"
 
@@ -44,7 +44,7 @@ func (tr *TeamRepository) Save(team *domain.Team) error {
 	})
 }
 
-func (tr *TeamRepository) FindById(teamId string) (*domain.Team, error) {
+func (tr *TeamRepository) FindById(teamId string) (*team.Team, error) {
 	connection := database.GetConnection()
 
 	sql := `
@@ -70,7 +70,7 @@ func (tr *TeamRepository) FindById(teamId string) (*domain.Team, error) {
 	defer rows.Close()
 
 	var id, teamName, organizationId string
-	var roles = make(map[string]domain.TeamRole)
+	var roles = make(map[string]team.TeamRole)
 
 	if !rows.Next() {
 		return nil, errors.New("team does not exist")
@@ -82,12 +82,12 @@ func (tr *TeamRepository) FindById(teamId string) (*domain.Team, error) {
 		if err := rows.Scan(&id, &teamName, &organizationId, &roleUserId, &userRole); err != nil {
 			return nil, err
 		}
-		roles[roleUserId] = domain.TeamRole(userRole)
+		roles[roleUserId] = team.TeamRole(userRole)
 	}
 
-	return &domain.Team{
-		ID:             (*domain.TeamId)(&teamId),
-		Name:           domain.TeamName(teamName),
+	return &team.Team{
+		ID:             (*team.TeamId)(&teamId),
+		Name:           team.TeamName(teamName),
 		OrganizationId: organizationId,
 		Roles:          roles,
 	}, nil
@@ -136,7 +136,7 @@ func (tr *TeamRepository) Search(organizationId, userId, searchTerm string) []in
 	return results
 }
 
-func upsertTeamOwnersTx(tx pgx.Tx, teamId string, owners map[string]domain.TeamRole) error {
+func upsertTeamOwnersTx(tx pgx.Tx, teamId string, owners map[string]team.TeamRole) error {
 	var totalValues = len(owners)
 	var values = make([]string, totalValues)
 

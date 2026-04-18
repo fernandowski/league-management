@@ -1,4 +1,4 @@
-package domain
+package season
 
 import (
 	"github.com/stretchr/testify/assert"

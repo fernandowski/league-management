@@ -1,10 +1,16 @@
-package domain
+package season
 
 import (
 	"errors"
 	"github.com/google/uuid"
+	"league-management/internal/organization_management/domain/league"
 	"strings"
 )
+
+type LeagueMembership = league.Membership
+type League = league.League
+
+const MembershipActive = league.MembershipActive
 
 type SeasonStatus string
 type SeasonPhase string

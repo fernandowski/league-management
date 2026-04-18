@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"league-management/internal/organization_management/domain"
+	seasonpkg "league-management/internal/organization_management/domain/season"
 	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/database"
 	"league-management/internal/shared/dtos"
@@ -21,7 +21,7 @@ func NewSeasonRepository() *SeasonRepository {
 	return &SeasonRepository{}
 }
 
-func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
+func (sr *SeasonRepository) FindByID(seasonID string) (*seasonpkg.Season, error) {
 	connection := database.GetConnection()
 
 	sql := `SELECT
@@ -50,7 +50,7 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 	}
 	defer rows.Close()
 
-	matchesMap := make(map[int][]domain.MatchSnapshot)
+	matchesMap := make(map[int][]seasonpkg.MatchSnapshot)
 
 	var seasonId, seasonName, leagueId, seasonStatus, seasonPhase string
 	var version int
@@ -74,12 +74,12 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 			if awayTeamID != nil {
 				awayId = *awayTeamID
 			}
-			status := domain.MatchStatusScheduled
+			status := seasonpkg.MatchStatusScheduled
 			if matchStatus != nil {
-				status = domain.MatchStatus(*matchStatus)
+				status = seasonpkg.MatchStatus(*matchStatus)
 			}
 
-			newMatch := domain.MatchSnapshot{
+			newMatch := seasonpkg.MatchSnapshot{
 				ID:            *matchID,
 				HomeTeamID:    homeId,
 				AwayTeamID:    awayId,
@@ -91,7 +91,7 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 			if exists {
 				matchesMap[*round] = append(matches, newMatch)
 			} else {
-				matchesMap[*round] = []domain.MatchSnapshot{newMatch}
+				matchesMap[*round] = []seasonpkg.MatchSnapshot{newMatch}
 			}
 		}
 		foundRows = true
@@ -101,9 +101,9 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 		return nil, errors.New("no season found")
 	}
 
-	rounds := []domain.RoundSnapshot{}
+	rounds := []seasonpkg.RoundSnapshot{}
 	for key, value := range matchesMap {
-		rounds = append(rounds, domain.RoundSnapshot{
+		rounds = append(rounds, seasonpkg.RoundSnapshot{
 			RoundNumber: key,
 			Matches:     value,
 		})
@@ -118,12 +118,12 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 		return nil, err
 	}
 
-	return domain.RehydrateSeasonFromSnapshot(domain.SeasonSnapshot{
+	return seasonpkg.RehydrateSeasonFromSnapshot(seasonpkg.SeasonSnapshot{
 		ID:             seasonId,
 		LeagueID:       leagueId,
 		Name:           seasonName,
-		Status:         domain.SeasonStatus(seasonStatus),
-		Phase:          domain.SeasonPhase(seasonPhase),
+		Status:         seasonpkg.SeasonStatus(seasonStatus),
+		Phase:          seasonpkg.SeasonPhase(seasonPhase),
 		Version:        version,
 		Rounds:         rounds,
 		PlayoffRules:   playoffRules,
@@ -132,7 +132,7 @@ func (sr *SeasonRepository) FindByID(seasonID string) (*domain.Season, error) {
 	}), nil
 }
 
-func (sr *SeasonRepository) Save(season *domain.Season) error {
+func (sr *SeasonRepository) Save(season *seasonpkg.Season) error {
 	return database.WithTx(context.Background(), func(tx pgx.Tx) error {
 		snapshot := season.Snapshot()
 
@@ -229,7 +229,7 @@ func (sr *SeasonRepository) Save(season *domain.Season) error {
 	})
 }
 
-func (sr *SeasonRepository) findPlayoffRules(seasonID string) (*domain.PlayoffRulesSnapshot, error) {
+func (sr *SeasonRepository) findPlayoffRules(seasonID string) (*seasonpkg.PlayoffRulesSnapshot, error) {
 	connection := database.GetConnection()
 
 	rulesSQL := `SELECT qualification_type, qualifier_count, reseed_each_round, third_place_match, allow_admin_seed_override
@@ -265,23 +265,23 @@ func (sr *SeasonRepository) findPlayoffRules(seasonID string) (*domain.PlayoffRu
 	}
 	defer rows.Close()
 
-	rounds := []domain.PlayoffRoundRuleSnapshot{}
+	rounds := []seasonpkg.PlayoffRoundRuleSnapshot{}
 	for rows.Next() {
-		var round domain.PlayoffRoundRuleSnapshot
+		var round seasonpkg.PlayoffRoundRuleSnapshot
 		if err := rows.Scan(&round.Name, &round.Legs, &round.HigherSeedHostsSecondLeg, &round.TiedAggregateResolution); err != nil {
 			return nil, err
 		}
 		rounds = append(rounds, round)
 	}
 
-	return &domain.PlayoffRulesSnapshot{
+	return &seasonpkg.PlayoffRulesSnapshot{
 		QualificationType: qualificationType,
 		QualifierCount:    qualifierCount,
 		Rounds:            rounds,
 	}, nil
 }
 
-func (sr *SeasonRepository) savePlayoffRules(tx pgx.Tx, season *domain.Season) error {
+func (sr *SeasonRepository) savePlayoffRules(tx pgx.Tx, season *seasonpkg.Season) error {
 	snapshot := season.Snapshot()
 	if snapshot.PlayoffRules == nil {
 		return nil
@@ -337,7 +337,7 @@ func (sr *SeasonRepository) savePlayoffRules(tx pgx.Tx, season *domain.Season) e
 	return nil
 }
 
-func (sr *SeasonRepository) findPlayoffBracket(seasonID string) (*domain.PlayoffBracketSnapshot, error) {
+func (sr *SeasonRepository) findPlayoffBracket(seasonID string) (*seasonpkg.PlayoffBracketSnapshot, error) {
 	connection := database.GetConnection()
 
 	var bracketID string
@@ -358,11 +358,11 @@ func (sr *SeasonRepository) findPlayoffBracket(seasonID string) (*domain.Playoff
 	}
 	defer rows.Close()
 
-	playoffRounds := []domain.PlayoffBracketRoundSnapshot{}
+	playoffRounds := []seasonpkg.PlayoffBracketRoundSnapshot{}
 	roundMap := map[int]int{}
 
 	for rows.Next() {
-		var tie domain.PlayoffTieSnapshot
+		var tie seasonpkg.PlayoffTieSnapshot
 		var homeSeed, awaySeed *int
 		var homeTeamID, awayTeamID, winnerTeamID *string
 		if err := rows.Scan(&tie.ID, &tie.RoundName, &tie.RoundOrder, &tie.SlotOrder, &homeSeed, &awaySeed, &homeTeamID, &awayTeamID, &tie.Status, &winnerTeamID); err != nil {
@@ -391,10 +391,10 @@ func (sr *SeasonRepository) findPlayoffBracket(seasonID string) (*domain.Playoff
 
 		index, exists := roundMap[tie.RoundOrder]
 		if !exists {
-			playoffRounds = append(playoffRounds, domain.PlayoffBracketRoundSnapshot{
+			playoffRounds = append(playoffRounds, seasonpkg.PlayoffBracketRoundSnapshot{
 				Name:  tie.RoundName,
 				Order: tie.RoundOrder,
-				Ties:  []domain.PlayoffTieSnapshot{},
+				Ties:  []seasonpkg.PlayoffTieSnapshot{},
 			})
 			index = len(playoffRounds) - 1
 			roundMap[tie.RoundOrder] = index
@@ -402,10 +402,10 @@ func (sr *SeasonRepository) findPlayoffBracket(seasonID string) (*domain.Playoff
 		playoffRounds[index].Ties = append(playoffRounds[index].Ties, tie)
 	}
 
-	return domain.RehydratePlayoffBracket(playoffRounds), nil
+	return seasonpkg.RehydratePlayoffBracket(playoffRounds), nil
 }
 
-func (sr *SeasonRepository) savePlayoffBracket(tx pgx.Tx, season *domain.Season) error {
+func (sr *SeasonRepository) savePlayoffBracket(tx pgx.Tx, season *seasonpkg.Season) error {
 	snapshot := season.Snapshot()
 	if snapshot.PlayoffBracket == nil {
 		return nil
@@ -488,7 +488,7 @@ func (sr *SeasonRepository) savePlayoffBracket(tx pgx.Tx, season *domain.Season)
 	return nil
 }
 
-func (sr *SeasonRepository) findPlayoffMatches(tieID string) ([]domain.MatchSnapshot, error) {
+func (sr *SeasonRepository) findPlayoffMatches(tieID string) ([]seasonpkg.MatchSnapshot, error) {
 	connection := database.GetConnection()
 
 	rows, err := connection.Query(context.Background(), `SELECT id, match_order, home_team_id, away_team_id, home_score, away_score, status
@@ -497,23 +497,23 @@ func (sr *SeasonRepository) findPlayoffMatches(tieID string) ([]domain.MatchSnap
 		ORDER BY match_order ASC`, tieID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return []domain.MatchSnapshot{}, nil
+			return []seasonpkg.MatchSnapshot{}, nil
 		}
 		return nil, err
 	}
 	defer rows.Close()
 
-	matches := []domain.MatchSnapshot{}
+	matches := []seasonpkg.MatchSnapshot{}
 	for rows.Next() {
 		var matchID string
 		var matchOrder int
 		var homeTeamID, awayTeamID *string
 		var homeScore, awayScore int
-		var status domain.MatchStatus
+		var status seasonpkg.MatchStatus
 		if err := rows.Scan(&matchID, &matchOrder, &homeTeamID, &awayTeamID, &homeScore, &awayScore, &status); err != nil {
 			return nil, err
 		}
-		match := domain.RehydrateMatch(domain.MatchState{
+		match := seasonpkg.RehydrateMatch(seasonpkg.MatchState{
 			ID:            matchID,
 			PlayoffTieID:  tieID,
 			MatchOrder:    matchOrder,
