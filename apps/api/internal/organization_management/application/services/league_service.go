@@ -2,28 +2,28 @@ package services
 
 import (
 	"errors"
-	"league-management/internal/organization_management/domain/league"
-	"league-management/internal/organization_management/domain/organization"
-	"league-management/internal/organization_management/domain/team"
+	leaguepkg "league-management/internal/organization_management/domain/league"
+	organizationpkg "league-management/internal/organization_management/domain/organization"
+	teampkg "league-management/internal/organization_management/domain/team"
 	"league-management/internal/shared/dtos"
 	user_domain "league-management/internal/user_management/domain"
 )
 
 type leagueStore interface {
-	FindById(string) (*league.League, error)
-	Save(*league.League) error
+	FindById(string) (*leaguepkg.League, error)
+	Save(*leaguepkg.League) error
 	Search(dtos.LeagueSearchDTO) (*map[string]interface{}, error)
 	FetchLeagueMembers(string) ([]interface{}, error)
-	FetchLeagueDetails(league.League) (map[string]interface{}, error)
-	WithLockedLeague(string, func(*league.League) error) error
+	FetchLeagueDetails(leaguepkg.League) (map[string]interface{}, error)
+	WithLockedLeague(string, func(*leaguepkg.League) error) error
 }
 
 type organizationFinder interface {
-	FindById(string) (*organization.Organization, error)
+	FindById(string) (*organizationpkg.Organization, error)
 }
 
 type teamFinder interface {
-	FindById(string) (*team.Team, error)
+	FindById(string) (*teampkg.Team, error)
 }
 
 type userFinder interface {
@@ -67,7 +67,7 @@ func (ls *LeagueService) Provision(ownerId string, organizationId string, league
 		return err
 	}
 
-	newLeague := league.NewLeague("", leagueName, ownerId, organizationId)
+	newLeague := leaguepkg.NewLeague("", leagueName, ownerId, organizationId)
 
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func (ls *LeagueService) InitiateTeamMembership(orgOwnerID string, leagueID stri
 		return errors.New("team does not exist")
 	}
 
-	return ls.leagueRepository.WithLockedLeague(leagueID, func(lockedLeague *league.League) error {
+	return ls.leagueRepository.WithLockedLeague(leagueID, func(lockedLeague *leaguepkg.League) error {
 		_, err = lockedLeague.StartTeamMembership(string(*team.ID))
 		return err
 	})
@@ -122,7 +122,7 @@ func (ls *LeagueService) RevokeTeamMembership(orgOwnerID, leagueId, membershipId
 		return errors.New("only organization owner allowed to change memberships")
 	}
 
-	return ls.leagueRepository.WithLockedLeague(leagueId, func(lockedLeague *league.League) error {
+	return ls.leagueRepository.WithLockedLeague(leagueId, func(lockedLeague *leaguepkg.League) error {
 		_, err = lockedLeague.RemoveMembership(membershipId)
 		return err
 	})

@@ -2,8 +2,8 @@ package services
 
 import (
 	"errors"
-	"league-management/internal/organization_management/domain/league"
-	"league-management/internal/organization_management/domain/organization"
+	leaguepkg "league-management/internal/organization_management/domain/league"
+	organizationpkg "league-management/internal/organization_management/domain/organization"
 	seasonpkg "league-management/internal/organization_management/domain/season"
 	domainservices "league-management/internal/organization_management/domain/services"
 	"league-management/internal/shared/dtos"
@@ -45,11 +45,11 @@ type seasonRepository interface {
 }
 
 type seasonLeagueRepository interface {
-	FindById(string) (*league.League, error)
+	FindById(string) (*leaguepkg.League, error)
 }
 
 type seasonOrganizationRepository interface {
-	FindById(string) (*organization.Organization, error)
+	FindById(string) (*organizationpkg.Organization, error)
 }
 
 func (ss *SeasonService) AddNewSeason(orgOwnerID, leagueID, seasonName string) error {
@@ -82,12 +82,12 @@ func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
 		return err
 	}
 
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
+	currentLeague, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
 	if err != nil {
 		return err
 	}
 
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
+	organization, err := ss.organizationRepo.FindById(currentLeague.OrganizationId)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
 		return errors.New("only org owner can plan schedule")
 	}
 
-	err = currentSeason.ScheduleRounds(leagueIDValue(league.Id), activeMemberships(league.Memberships))
+	err = currentSeason.ScheduleRounds(leagueIDValue(currentLeague.Id), activeMemberships(currentLeague.Memberships))
 	if err != nil {
 		return err
 	}
@@ -109,10 +109,10 @@ func (ss *SeasonService) PlanSchedule(orgOwnerID, seasonID string) error {
 	return nil
 }
 
-func activeMemberships(memberships []league.Membership) []league.Membership {
-	active := make([]league.Membership, 0, len(memberships))
+func activeMemberships(memberships []leaguepkg.Membership) []leaguepkg.Membership {
+	active := make([]leaguepkg.Membership, 0, len(memberships))
 	for _, membership := range memberships {
-		if membership.MemberShipStatus == league.MembershipActive {
+		if membership.MemberShipStatus == leaguepkg.MembershipActive {
 			active = append(active, membership)
 		}
 	}
@@ -128,25 +128,31 @@ func leagueIDValue(id *string) string {
 	return *id
 }
 
-func (ss *SeasonService) StartSeason(orgOwnerID, seasonID string) error {
+func (ss *SeasonService) authorizedSeasonContext(orgOwnerID, seasonID, unauthorizedMessage string) (*seasonpkg.Season, *leaguepkg.League, error) {
 	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
+	currentLeague, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
+	currentOrganization, err := ss.organizationRepo.FindById(currentLeague.OrganizationId)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return errors.New("organization does not belong to user")
+	if !currentOrganization.BelongsToOwner(orgOwnerID) {
+		return nil, nil, errors.New(unauthorizedMessage)
 	}
+
+	return currentSeason, currentLeague, nil
+}
+
+func (ss *SeasonService) StartSeason(orgOwnerID, seasonID string) error {
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "organization does not belong to user")
 	if err != nil {
 		return err
 	}
@@ -165,24 +171,7 @@ func (ss *SeasonService) StartSeason(orgOwnerID, seasonID string) error {
 }
 
 func (ss *SeasonService) ChangeMatchUpScore(orgOwnerID, seasonID string, changeScoreDTO dtos.ChangeGameScoreDTO) error {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
-	if err != nil {
-		return err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return errors.New("organization does not belong to user")
-	}
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "organization does not belong to user")
 	if err != nil {
 		return err
 	}
@@ -201,24 +190,7 @@ func (ss *SeasonService) ChangeMatchUpScore(orgOwnerID, seasonID string, changeS
 }
 
 func (ss *SeasonService) CompleteCurrentRound(orgOwnerID, seasonID string) error {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
-	if err != nil {
-		return err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return errors.New("organization does not belong to user")
-	}
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "organization does not belong to user")
 	if err != nil {
 		return err
 	}
@@ -237,23 +209,9 @@ func (ss *SeasonService) CompleteCurrentRound(orgOwnerID, seasonID string) error
 }
 
 func (ss *SeasonService) SeasonDetails(orgOwnerID, seasonID string) (map[string]interface{}, error) {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "only org owner can view details")
 	if err != nil {
 		return nil, err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return nil, err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return nil, errors.New("only org owner can view details")
 	}
 
 	result, err := ss.seasonRepository.FetchDetails(currentSeason.SeasonID())
@@ -275,23 +233,9 @@ func (ss *SeasonService) Search(orgOwnerID, leagueID string, searchDTO dtos.Sear
 }
 
 func (ss *SeasonService) SeasonStandings(orgOwnerID, seasonID string) (map[string]interface{}, error) {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "only org owner can view details")
 	if err != nil {
 		return nil, err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return nil, err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return nil, errors.New("only org owner can view details")
 	}
 
 	result, err := ss.seasonRepository.FetchSeasonStandings(currentSeason.SeasonID())
@@ -302,23 +246,9 @@ func (ss *SeasonService) SeasonStandings(orgOwnerID, seasonID string) (map[strin
 	return result, nil
 }
 func (ss *SeasonService) SeasonMatchUps(orgOwnerID, seasonID string) ([]interface{}, error) {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "only org owner can view details")
 	if err != nil {
 		return nil, err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return nil, err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return nil, errors.New("only org owner can view details")
 	}
 
 	result, err := ss.seasonRepository.FetchSeasonMatchUps(currentSeason.SeasonID())
@@ -330,23 +260,9 @@ func (ss *SeasonService) SeasonMatchUps(orgOwnerID, seasonID string) ([]interfac
 }
 
 func (ss *SeasonService) ConfigurePlayoffRules(orgOwnerID, seasonID string, dto dtos.ConfigurePlayoffRulesDTO) error {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "only org owner can configure playoff rules")
 	if err != nil {
 		return err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return errors.New("only org owner can configure playoff rules")
 	}
 
 	rules := seasonpkg.PlayoffRulesSnapshot{
@@ -373,23 +289,9 @@ func (ss *SeasonService) ConfigurePlayoffRules(orgOwnerID, seasonID string, dto 
 }
 
 func (ss *SeasonService) PlayoffRules(orgOwnerID, seasonID string) (map[string]interface{}, error) {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "only org owner can view playoff rules")
 	if err != nil {
 		return nil, err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return nil, err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return nil, errors.New("only org owner can view playoff rules")
 	}
 
 	qualificationType, configured := currentSeason.PlayoffQualificationType()
@@ -429,23 +331,9 @@ func (ss *SeasonService) PlayoffRules(orgOwnerID, seasonID string) (map[string]i
 }
 
 func (ss *SeasonService) PlayoffQualificationPreview(orgOwnerID, seasonID string) (map[string]interface{}, error) {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "only org owner can view playoff qualification")
 	if err != nil {
 		return nil, err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return nil, err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return nil, errors.New("only org owner can view playoff qualification")
 	}
 	qualifierCount, configured := currentSeason.PlayoffQualifierCount()
 	if !configured {
@@ -495,23 +383,9 @@ func (ss *SeasonService) PlayoffQualificationPreview(orgOwnerID, seasonID string
 }
 
 func (ss *SeasonService) GeneratePlayoffBracket(orgOwnerID, seasonID string) error {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "only org owner can generate playoff bracket")
 	if err != nil {
 		return err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return errors.New("only org owner can generate playoff bracket")
 	}
 	qualifierCount, configured := currentSeason.PlayoffQualifierCount()
 	if !configured {
@@ -558,46 +432,18 @@ func (ss *SeasonService) GeneratePlayoffBracket(orgOwnerID, seasonID string) err
 }
 
 func (ss *SeasonService) PlayoffBracket(orgOwnerID, seasonID string) (map[string]interface{}, error) {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "only org owner can view playoff bracket")
 	if err != nil {
 		return nil, err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return nil, err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return nil, err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return nil, errors.New("only org owner can view playoff bracket")
 	}
 
 	return ss.seasonRepository.FetchPlayoffBracket(currentSeason.SeasonID())
 }
 
 func (ss *SeasonService) RecordPlayoffMatchScore(orgOwnerID, seasonID, tieID, matchID string, dto dtos.ChangeGameScoreDTO) error {
-	currentSeason, err := ss.seasonRepository.FindByID(seasonID)
+	currentSeason, _, err := ss.authorizedSeasonContext(orgOwnerID, seasonID, "only org owner can update playoff scores")
 	if err != nil {
 		return err
-	}
-
-	league, err := ss.leagueRepository.FindById(currentSeason.LeagueID())
-	if err != nil {
-		return err
-	}
-
-	organization, err := ss.organizationRepo.FindById(league.OrganizationId)
-	if err != nil {
-		return err
-	}
-
-	if !organization.BelongsToOwner(orgOwnerID) {
-		return errors.New("only org owner can update playoff scores")
 	}
 
 	updatedSeason, err := currentSeason.RecordPlayoffMatchScore(tieID, matchID, dto.HomeScore, dto.AwayScore)

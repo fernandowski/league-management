@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-	"league-management/internal/organization_management/domain/season"
+	seasonpkg "league-management/internal/organization_management/domain/season"
 )
 
 type RefereeService struct{}
@@ -12,7 +12,7 @@ func NewRefereeService() *RefereeService {
 }
 
 // UpdateMatchScore allows a referee to update the score of a match through the season aggregate.
-func (rs *RefereeService) UpdateMatchScore(currentSeason *season.Season, matchID, refereeID string, homeScore, awayScore int) (*season.Season, error) {
+func (rs *RefereeService) UpdateMatchScore(currentSeason *seasonpkg.Season, matchID, refereeID string, homeScore, awayScore int) (*seasonpkg.Season, error) {
 	if currentSeason == nil {
 		return nil, errors.New("season cannot be nil")
 	}
