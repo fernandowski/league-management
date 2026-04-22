@@ -17,8 +17,28 @@ export interface TeamResponse {
 export interface LeagueDetailResponse {
     id: string,
     name: string
-    season: Record<string, any>
+    season: {
+        id: string
+        name: string
+        status: string
+        phase?: string
+    } | null
     active_members: number
+}
+
+export interface SeasonSummaryResponse {
+    id: string
+    name: string
+    league_id: string
+    status: string
+    phase: string
+    champion_team_id?: string | null
+    champion_team_name?: string | null
+}
+
+export interface SeasonSearchResponse {
+    data: SeasonSummaryResponse[]
+    total: number
 }
 
 

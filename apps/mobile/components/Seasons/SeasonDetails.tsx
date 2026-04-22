@@ -1,5 +1,5 @@
 import {View, StyleSheet, useWindowDimensions} from "react-native";
-import React, {useCallback, useEffect} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import {SeasonDetailResponse, useData} from "@/hooks/useData";
 import SeasonInformation from "@/components/Seasons/SeasonInformation";
 import usePost from "@/hooks/usePost";
@@ -20,6 +20,7 @@ export interface SeasonDetailsProps {
 export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
     const {fetchData, data: seasonDetails} = useData<SeasonDetailResponse>();
     const {postData, result, clearResult} = usePost();
+    const [standingsRefreshKey, setStandingsRefreshKey] = useState(0);
     const dimensions = useWindowDimensions();
     const isLargeScreen = dimensions.width >= 768;
     const theme = useAppTheme();
@@ -40,7 +41,13 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
         await postData(`/v1/leagues/${props.leagueId}/seasons/${props.seasonId}/start`);
         props.onSeasonPlanned();
         fetchRoundDetails();
+        setStandingsRefreshKey((current) => current + 1);
     }
+
+    const handleRoundCompleted = useCallback(() => {
+        fetchRoundDetails();
+        setStandingsRefreshKey((current) => current + 1);
+    }, [fetchRoundDetails]);
 
     useEffect(() => {
         clearResult();
@@ -80,7 +87,7 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
                                 <SeasonMatchUpManagement
                                     seasonId={props.seasonId}
                                     seasonStatus={seasonDetails.status}
-                                    onRoundCompleted={fetchRoundDetails}
+                                    onRoundCompleted={handleRoundCompleted}
                                 />
                             </View>
                         )}
@@ -106,6 +113,7 @@ export default function LeagueSeasonDetails(props: SeasonDetailsProps) {
                 {showStandings && (
                     <SeasonStanding
                         seasonId={props.seasonId}
+                        refreshKey={standingsRefreshKey}
                         style={styles.standingsCard}
                         contentStyle={styles.standingsCardContent}
                     />

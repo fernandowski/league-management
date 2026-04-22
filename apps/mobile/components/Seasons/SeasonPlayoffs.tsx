@@ -126,7 +126,7 @@ export default function SeasonPlayoffs({seasonId}: SeasonPlayoffsProps) {
                         <View style={[styles.messageBox, {backgroundColor: theme.colors.secondaryContainer, borderColor: theme.colors.outlineVariant}]}>
                             <AppText variant="labelLarge" style={{color: theme.colors.secondary}}>Configured</AppText>
                             <AppText style={{color: theme.colors.onSecondaryContainer}}>
-                                Top {data.rules.qualifier_count} qualify. {summarizeRounds(data.rules.rounds)}
+                                {summarizePlayoffRules(data.rules.qualifier_count, data.rules.rounds)}
                             </AppText>
                         </View>
                     ) : (
@@ -206,10 +206,15 @@ export default function SeasonPlayoffs({seasonId}: SeasonPlayoffsProps) {
     );
 }
 
-function summarizeRounds(rounds: PlayoffRoundRuleResponse[]) {
-    return rounds
-        .map((round) => `${round.name} ${round.legs === 1 ? "single-leg" : "two-leg"}`)
-        .join(", ");
+function summarizePlayoffRules(qualifierCount: number, rounds: PlayoffRoundRuleResponse[]) {
+    const nonFinalRound = rounds.find((round) => round.name !== "final");
+    const nonFinalFormat = nonFinalRound?.legs === 2 ? "two legs" : "one leg";
+
+    if (qualifierCount <= 2) {
+        return "Top 2 qualify. The playoffs are a single-match final.";
+    }
+
+    return `Top ${qualifierCount} qualify. Earlier knockout rounds use ${nonFinalFormat}; the final is always a single match.`;
 }
 
 const styles = StyleSheet.create({

@@ -9,6 +9,7 @@ import { useAppTheme } from "@/theme/theme";
 
 export interface SeasonStandingProps {
     seasonId: string
+    refreshKey?: number
     style?: StyleProp<ViewStyle>
     cardStyle?: StyleProp<ViewStyle>
     contentStyle?: StyleProp<ViewStyle>
@@ -34,7 +35,7 @@ export default function SeasonStanding(props: SeasonStandingProps) {
         if (props.seasonId) {
             fetchData(`/v1/seasons/${props.seasonId}/standings`)
         }
-    }, [fetchData, props.seasonId]);
+    }, [fetchData, props.refreshKey, props.seasonId]);
 
     if (fetching) {
         return <View style={props.style}><AppText>Fetching Details</AppText></View>

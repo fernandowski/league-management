@@ -2,6 +2,7 @@ package season
 
 import (
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"league-management/internal/organization_management/domain/league"
 	"strings"
@@ -728,6 +729,10 @@ func (r PlayoffRulesSnapshot) Validate() error {
 		}
 	}
 
+	if len(r.Rounds) < requiredPlayoffRounds(r.QualifierCount) {
+		return errors.New("not enough playoff rounds configured for qualifier count")
+	}
+
 	return nil
 }
 
@@ -743,6 +748,9 @@ func (r PlayoffRoundRule) Snapshot() PlayoffRoundRuleSnapshot {
 func (r PlayoffRoundRuleSnapshot) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("round name is required")
+	}
+	if r.Name == "final" && r.Legs != 1 {
+		return errors.New("final must be single leg")
 	}
 	if r.Legs < 1 || r.Legs > 2 {
 		return errors.New("round legs must be 1 or 2")
@@ -863,19 +871,18 @@ func (s *Season) GeneratePlayoffBracket(qualifiedTeams []PlayoffQualifiedTeam) (
 
 	newSeason := s.copy()
 	bracket := &PlayoffBracket{rounds: []PlayoffBracketRound{}}
+	applicableRounds := applicablePlayoffRounds(s.playoffRules)
+	bracketSize := nextPowerOfTwo(len(qualifiedTeams))
 
-	for roundIndex, roundRule := range s.playoffRules.rounds {
+	for roundIndex, roundRule := range applicableRounds {
 		bracketRound := PlayoffBracketRound{
 			name:  roundRule.name,
 			order: roundIndex + 1,
 			ties:  []PlayoffTie{},
 		}
 
-		tieCount := len(qualifiedTeams) / 2
-		if roundIndex > 0 {
-			tieCount = len(bracket.rounds[roundIndex-1].ties) / 2
-		}
-		if tieCount == 0 {
+		tieCount := bracketSize / (1 << (roundIndex + 1))
+		if tieCount < 1 {
 			tieCount = 1
 		}
 
@@ -888,17 +895,6 @@ func (s *Season) GeneratePlayoffBracket(qualifiedTeams []PlayoffQualifiedTeam) (
 				status:     "pending",
 			}
 
-			if roundIndex == 0 {
-				homeTeam := qualifiedTeams[slot]
-				awayTeam := qualifiedTeams[len(qualifiedTeams)-1-slot]
-				tie.homeSeed = homeTeam.Seed
-				tie.awaySeed = awayTeam.Seed
-				tie.homeTeamID = homeTeam.TeamID
-				tie.awayTeamID = awayTeam.TeamID
-				tie.matches = buildPlayoffMatches(tie, roundRule)
-				tie.status = "ready"
-			}
-
 			bracketRound.ties = append(bracketRound.ties, tie)
 		}
 
@@ -906,6 +902,42 @@ func (s *Season) GeneratePlayoffBracket(qualifiedTeams []PlayoffQualifiedTeam) (
 	}
 
 	newSeason.playoffBracket = bracket
+
+	seededSlots := seededBracketSlots(qualifiedTeams)
+	firstRound := &bracket.rounds[0]
+	for tieIndex := range firstRound.ties {
+		tie := &firstRound.ties[tieIndex]
+		homeTeam := seededSlots[tieIndex*2]
+		awayTeam := seededSlots[(tieIndex*2)+1]
+
+		if homeTeam != nil {
+			tie.homeSeed = homeTeam.Seed
+			tie.homeTeamID = homeTeam.TeamID
+		}
+		if awayTeam != nil {
+			tie.awaySeed = awayTeam.Seed
+			tie.awayTeamID = awayTeam.TeamID
+		}
+
+		switch {
+		case homeTeam != nil && awayTeam != nil:
+			tie.matches = buildPlayoffMatches(*tie, applicableRounds[0])
+			tie.status = "ready"
+		case homeTeam != nil || awayTeam != nil:
+			winnerTeamID := tie.homeTeamID
+			winnerSeed := tie.homeSeed
+			if awayTeam != nil {
+				winnerTeamID = tie.awayTeamID
+				winnerSeed = tie.awaySeed
+			}
+			tie.winnerTeamID = &winnerTeamID
+			tie.status = "finished"
+			if err := s.advancePlayoffTieWinner(newSeason, 0, tie, winnerTeamID, winnerSeed); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	newSeason.phase = SeasonPhasePlayoffs
 	newSeason.status = SeasonStatusInProgress
 	return newSeason, nil
@@ -1075,7 +1107,7 @@ func (s *Season) advancePlayoffTieWinner(newSeason *Season, roundIndex int, tie 
 	}
 
 	if nextTie.homeTeamID != "" && nextTie.awayTeamID != "" && len(nextTie.matches) == 0 {
-		roundRule := s.playoffRules.rounds[roundIndex+1]
+		roundRule := applicablePlayoffRounds(s.playoffRules)[roundIndex+1]
 		nextTie.matches = buildPlayoffMatches(*nextTie, roundRule)
 		nextTie.status = "ready"
 	}
@@ -1103,12 +1135,123 @@ func (r PlayoffRules) Validate() error {
 		}
 	}
 
+	if len(r.rounds) < requiredPlayoffRounds(r.qualifierCount) {
+		return errors.New("not enough playoff rounds configured for qualifier count")
+	}
+
 	return nil
+}
+
+func applicablePlayoffRounds(rules *PlayoffRules) []PlayoffRoundRule {
+	if rules == nil || len(rules.rounds) == 0 {
+		return nil
+	}
+
+	required := requiredPlayoffRounds(rules.qualifierCount)
+	if required <= len(rules.rounds) {
+		start := len(rules.rounds) - required
+		return append([]PlayoffRoundRule(nil), rules.rounds[start:]...)
+	}
+
+	names := defaultPlayoffRoundNames(required)
+	missing := required - len(rules.rounds)
+	rounds := make([]PlayoffRoundRule, 0, required)
+	template := rules.rounds[0]
+
+	for index := 0; index < missing; index++ {
+		generated := template
+		generated.name = names[index]
+		rounds = append(rounds, generated)
+	}
+
+	return append(rounds, rules.rounds...)
+}
+
+func requiredPlayoffRounds(qualifierCount int) int {
+	rounds := 0
+	for teams := nextPowerOfTwo(qualifierCount); teams > 1; teams = teams / 2 {
+		rounds++
+	}
+
+	return rounds
+}
+
+func nextPowerOfTwo(value int) int {
+	if value <= 1 {
+		return 1
+	}
+
+	result := 1
+	for result < value {
+		result *= 2
+	}
+
+	return result
+}
+
+func seededBracketSlots(qualifiedTeams []PlayoffQualifiedTeam) []*PlayoffQualifiedTeam {
+	bracketSize := nextPowerOfTwo(len(qualifiedTeams))
+	seedOrder := standardSeedOrder(bracketSize)
+	teamsBySeed := make(map[int]PlayoffQualifiedTeam, len(qualifiedTeams))
+
+	for _, team := range qualifiedTeams {
+		teamsBySeed[team.Seed] = team
+	}
+
+	slots := make([]*PlayoffQualifiedTeam, len(seedOrder))
+	for index, seed := range seedOrder {
+		if team, ok := teamsBySeed[seed]; ok {
+			teamCopy := team
+			slots[index] = &teamCopy
+		}
+	}
+
+	return slots
+}
+
+func standardSeedOrder(bracketSize int) []int {
+	order := []int{1}
+	for len(order) < bracketSize {
+		nextSize := len(order) * 2
+		next := make([]int, 0, nextSize)
+		sum := nextSize + 1
+		for _, seed := range order {
+			next = append(next, seed, sum-seed)
+		}
+		order = next
+	}
+
+	return order
+}
+
+func defaultPlayoffRoundNames(count int) []string {
+	switch count {
+	case 1:
+		return []string{"final"}
+	case 2:
+		return []string{"semifinal", "final"}
+	case 3:
+		return []string{"quarterfinal", "semifinal", "final"}
+	case 4:
+		return []string{"round_of_16", "quarterfinal", "semifinal", "final"}
+	case 5:
+		return []string{"round_of_32", "round_of_16", "quarterfinal", "semifinal", "final"}
+	default:
+		names := make([]string, 0, count)
+		for teams := 1 << count; teams > 2; teams = teams / 2 {
+			names = append(names, fmt.Sprintf("round_of_%d", teams))
+		}
+		names = append(names, "final")
+		return names
+	}
 }
 
 func (r PlayoffRoundRule) Validate() error {
 	if strings.TrimSpace(r.name) == "" {
 		return errors.New("round name is required")
+	}
+	if r.name == "final" && r.legs != 1 {
+		return errors.New("final must be single leg")
 	}
 	if r.legs < 1 || r.legs > 2 {
 		return errors.New("round legs must be 1 or 2")

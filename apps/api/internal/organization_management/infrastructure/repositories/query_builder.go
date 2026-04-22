@@ -9,6 +9,7 @@ type QueryBuilder struct {
 	baseQuery    string
 	whereClauses []string
 	parameters   []interface{}
+	orderBy      string
 	limit        int
 	offset       int
 }
@@ -27,11 +28,19 @@ func (qb *QueryBuilder) SetPagination(limit, offset int) {
 	qb.offset = offset
 }
 
+func (qb *QueryBuilder) SetOrderBy(orderBy string) {
+	qb.orderBy = orderBy
+}
+
 func (qb *QueryBuilder) BuildQuery() (string, []interface{}) {
 	query := qb.baseQuery
 
 	if len(qb.whereClauses) > 0 {
 		query += " WHERE " + strings.Join(qb.whereClauses, " AND ")
+	}
+
+	if qb.orderBy != "" {
+		query += " ORDER BY " + qb.orderBy
 	}
 
 	if qb.limit > 0 {

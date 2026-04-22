@@ -91,7 +91,8 @@ func (lr *LeagueRepository) findByIdTx(ctx context.Context, querier interface {
 		if err := rows.Scan(&id, &teamId); err != nil {
 
 		}
-		memberships = append(memberships, league.Membership{ID: id, TeamID: teamId})
+		// league_teams only stores active memberships; presence in this table means active.
+		memberships = append(memberships, league.Membership{ID: id, TeamID: teamId, MemberShipStatus: league.MembershipActive})
 	}
 
 	foundLeague := league.League{

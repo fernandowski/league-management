@@ -17,10 +17,15 @@ const Pagination: React.FC<PaginationProps> = ({
   itemsPerPage,
   onPageChange,
 }) => {
+  const theme = useAppTheme();
+
+  if (totalItems === 0) {
+    return null;
+  }
+
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const from = currentPage * itemsPerPage + 1;
   const to = Math.min((currentPage + 1) * itemsPerPage, totalItems);
-  const theme = useAppTheme();
 
   return (
     <View style={styles.container}>

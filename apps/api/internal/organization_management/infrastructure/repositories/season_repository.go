@@ -541,21 +541,41 @@ func (sr *SeasonRepository) Search(orgOwnerID, leagueID string, searchDTO dtos.S
 	connection := database.GetConnection()
 	queryBuilder := QueryBuilder{}
 
-	sql := `SELECT seasons.id, seasons.name, seasons.league_id, seasons.status
-			FROM organizations
-			JOIN leagues ON leagues.organization_id=organizations.id
-			JOIN seasons ON seasons.league_id=leagues.id`
+	sql := `SELECT
+				seasons.id,
+				seasons.name,
+				seasons.league_id,
+				seasons.status,
+				seasons.season_phase,
+				seasons.champion_team_id,
+				champion_team.name AS champion_team_name
+				FROM organizations
+				JOIN leagues ON leagues.organization_id=organizations.id
+				JOIN seasons ON seasons.league_id=leagues.id
+				LEFT JOIN teams AS champion_team ON champion_team.id = seasons.champion_team_id`
 
 	queryBuilder.SetQuery(sql)
+
+	if searchDTO.Phase == "" && searchDTO.Status == string(seasonpkg.SeasonPhaseCompleted) {
+		searchDTO.Phase = string(seasonpkg.SeasonPhaseCompleted)
+		searchDTO.Status = ""
+	}
 
 	queryBuilder.AddFilter("organizations.user_id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), orgOwnerID)
 	queryBuilder.AddFilter("leagues.id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), leagueID)
 	queryBuilder.AddFilter("seasons.status!=$"+fmt.Sprint(len(queryBuilder.parameters)+1), "undefined")
+	if searchDTO.Status != "" {
+		queryBuilder.AddFilter("seasons.status=$"+fmt.Sprint(len(queryBuilder.parameters)+1), searchDTO.Status)
+	}
+	if searchDTO.Phase != "" {
+		queryBuilder.AddFilter("seasons.season_phase=$"+fmt.Sprint(len(queryBuilder.parameters)+1), searchDTO.Phase)
+	}
 
 	if searchDTO.Term != "" {
 		queryBuilder.AddFilter("seasons.name=$"+fmt.Sprint(len(queryBuilder.parameters)+1), searchDTO.Term)
 	}
 
+	queryBuilder.SetOrderBy("seasons.updated_at DESC, seasons.created_at DESC, seasons.id DESC")
 	queryBuilder.SetPagination(searchDTO.Limit, searchDTO.Offset)
 
 	query, parameters := queryBuilder.BuildQuery()
@@ -568,16 +588,20 @@ func (sr *SeasonRepository) Search(orgOwnerID, leagueID string, searchDTO dtos.S
 	}
 
 	for rows.Next() {
-		var seasonId, seasonName, leagueId, status string
-		if err := rows.Scan(&seasonId, &seasonName, &leagueId, &status); err != nil {
+		var seasonId, seasonName, leagueId, status, phase string
+		var championTeamID, championTeamName *string
+		if err := rows.Scan(&seasonId, &seasonName, &leagueId, &status, &phase, &championTeamID, &championTeamName); err != nil {
 			return results, 0
 		}
-		season := make(map[string]string)
+		season := make(map[string]interface{})
 
 		season["id"] = seasonId
 		season["name"] = seasonName
 		season["league_id"] = leagueId
 		season["status"] = status
+		season["phase"] = phase
+		season["champion_team_id"] = championTeamID
+		season["champion_team_name"] = championTeamName
 
 		results = append(results, season)
 	}
@@ -688,8 +712,20 @@ func getCount(orgOwnerID, leagueID string, searchDTO dtos.SearchSeasonDTO) int {
 
 	queryBuilder.SetQuery(sql)
 
+	if searchDTO.Phase == "" && searchDTO.Status == string(seasonpkg.SeasonPhaseCompleted) {
+		searchDTO.Phase = string(seasonpkg.SeasonPhaseCompleted)
+		searchDTO.Status = ""
+	}
+
 	queryBuilder.AddFilter("organizations.user_id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), orgOwnerID)
 	queryBuilder.AddFilter("leagues.id=$"+fmt.Sprint(len(queryBuilder.parameters)+1), leagueID)
+	queryBuilder.AddFilter("seasons.status!=$"+fmt.Sprint(len(queryBuilder.parameters)+1), "undefined")
+	if searchDTO.Status != "" {
+		queryBuilder.AddFilter("seasons.status=$"+fmt.Sprint(len(queryBuilder.parameters)+1), searchDTO.Status)
+	}
+	if searchDTO.Phase != "" {
+		queryBuilder.AddFilter("seasons.season_phase=$"+fmt.Sprint(len(queryBuilder.parameters)+1), searchDTO.Phase)
+	}
 
 	if searchDTO.Term != "" {
 		queryBuilder.AddFilter("seasons.name=$"+fmt.Sprint(len(queryBuilder.parameters)+1), searchDTO.Term)

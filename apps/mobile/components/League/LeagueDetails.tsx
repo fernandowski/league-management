@@ -97,7 +97,7 @@ export default function LeagueDetails(props: LeagueDetailsProps): React.JSX.Elem
                     </View>
                     <View style={styles.tabSection}>
                         <Tabs tabs={[
-                            {key: 'details', title: 'Details', view: <LeagueDetailsCard data={data}/>},
+                            {key: 'details', title: 'Details', view: <LeagueDetailsCard data={data} onSeasonChanged={fetchLeagueDetails}/>},
                             {key: 'teams', title: 'Teams', view: <MembershipView leagueId={props.leagueId} onMemberRefresh={fetchLeagueDetails}/>},
                             {key: 'season', title: 'Season', view: <SeasonTabView league={data} onSeasonAdded={onSeasonAdded} onSeasonPlanned={onSeasonPlanned}/>},
                         ]}>

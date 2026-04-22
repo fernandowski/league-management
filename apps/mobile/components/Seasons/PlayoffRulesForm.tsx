@@ -30,8 +30,7 @@ export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: Play
     const existingRules = playoffRules?.rules;
 
     const [qualifierCount, setQualifierCount] = useState("4");
-    const [semifinalLegs, setSemifinalLegs] = useState("2");
-    const [finalLegs, setFinalLegs] = useState("1");
+    const [nonFinalLegs, setNonFinalLegs] = useState("2");
     const [thirdPlaceMatch, setThirdPlaceMatch] = useState(false);
     const [reseedEachRound, setReseedEachRound] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -45,14 +44,10 @@ export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: Play
         setThirdPlaceMatch(existingRules.third_place_match);
         setReseedEachRound(existingRules.reseed_each_round);
 
-        const semifinalRule = existingRules.rounds.find((round) => round.name === "semifinal");
-        const finalRule = existingRules.rounds.find((round) => round.name === "final");
+        const nonFinalRule = existingRules.rounds.find((round) => round.name !== "final");
 
-        if (semifinalRule) {
-            setSemifinalLegs(String(semifinalRule.legs));
-        }
-        if (finalRule) {
-            setFinalLegs(String(finalRule.legs));
+        if (nonFinalRule) {
+            setNonFinalLegs(String(nonFinalRule.legs));
         }
     }, [existingRules]);
 
@@ -70,13 +65,13 @@ export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: Play
             rounds: [
                 {
                     name: "semifinal",
-                    legs: Number(semifinalLegs),
-                    higher_seed_hosts_second_leg: semifinalLegs === "2",
+                    legs: Number(nonFinalLegs),
+                    higher_seed_hosts_second_leg: nonFinalLegs === "2",
                     tied_aggregate_resolution: "higher_seed_advances",
                 },
                 {
                     name: "final",
-                    legs: Number(finalLegs),
+                    legs: 1,
                     higher_seed_hosts_second_leg: false,
                     tied_aggregate_resolution: "clear_winner_required",
                 },
@@ -118,19 +113,18 @@ export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: Play
 
                 <View style={styles.grid}>
                     <AppSelect
-                        label="Semifinal Format"
-                        value={semifinalLegs}
+                        label="Non-final Rounds"
+                        value={nonFinalLegs}
                         options={legsOptions}
                         disabled={isReadOnly}
-                        onValueChange={setSemifinalLegs}
+                        onValueChange={setNonFinalLegs}
                     />
-                    <AppSelect
-                        label="Final Format"
-                        value={finalLegs}
-                        options={legsOptions}
-                        disabled={isReadOnly}
-                        onValueChange={setFinalLegs}
-                    />
+                </View>
+
+                <View style={[styles.notice, {backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant}]}>
+                    <AppText style={{color: theme.colors.onSurfaceVariant}}>
+                        Finals are always single-leg. This setting applies to earlier knockout rounds only.
+                    </AppText>
                 </View>
 
                 <View style={styles.grid}>
@@ -153,7 +147,7 @@ export default function PlayoffRulesForm({seasonId, playoffRules, onSaved}: Play
                 <View style={[styles.summaryBox, {backgroundColor: theme.colors.primaryContainer}]}>
                     <AppText variant="labelLarge" style={{color: theme.colors.primary}}>MVP Rules Summary</AppText>
                     <AppText style={{color: theme.colors.onPrimaryContainer}}>
-                        Qualification uses final standings, tied aggregate playoff rounds advance the higher seed, and the final must produce a clear winner.
+                        Qualification uses final standings, higher seeds receive automatic byes when needed, non-final rounds use the selected leg format, and the final is always one match with a clear winner.
                     </AppText>
                 </View>
 

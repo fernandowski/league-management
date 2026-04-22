@@ -28,16 +28,16 @@ export default function AddSeason(props: AddSeasonProps) {
         <AppCard style={[styles.surfaceContainer, {borderColor: theme.colors.outline}]}>
             <AppCard.Content style={styles.content}>
                 <View style={styles.copy}>
-                    <AppText variant="headlineSmall">No season configured</AppText>
+                    <AppText variant="headlineSmall">No active season</AppText>
                     <AppText variant="bodyLarge" style={{color: theme.colors.onSurfaceVariant}}>
                         Create a season to unlock scheduling, standings, and match management for this league.
                     </AppText>
                 </View>
                 <View style={[styles.actionRow, {backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outlineVariant}]}>
                     <View style={styles.actionCopy}>
-                        <AppText variant="titleMedium">Create the first season</AppText>
+                        <AppText variant="titleMedium">Create a season</AppText>
                         <AppText variant="bodyMedium" style={{color: theme.colors.onSurfaceVariant}}>
-                            Start with a season name, then plan the match schedule once your teams are ready.
+                            Start with a season name, then plan the schedule when your teams are ready.
                         </AppText>
                     </View>
                     <AppButton variant="submit" onPress={openSeasonModal}>Add Season</AppButton>

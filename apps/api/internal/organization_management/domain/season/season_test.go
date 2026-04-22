@@ -22,6 +22,49 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("One team should error out", func(t *testing.T) {
+		season := rehydratedSeasonForTest("id-1", "league-id-1", "Test League", SeasonStatusPending, "", 0, nil, nil, nil, nil)
+
+		leagueId := "league-id-1"
+		league := League{
+			Id:             &leagueId,
+			Name:           "test-league",
+			OwnerId:        "test-owner-id",
+			OrganizationId: "test-org-id",
+			Memberships: []LeagueMembership{
+				{ID: "m1", TeamID: "team-a", MemberShipStatus: MembershipActive},
+			},
+		}
+
+		err := season.ScheduleRounds(leagueId, league.Memberships)
+		assert.Error(t, err)
+	})
+
+	t.Run("Two teams should produce one round and one match", func(t *testing.T) {
+		season := rehydratedSeasonForTest("id-1", "league-id-1", "Test League", SeasonStatusPending, "", 0, nil, nil, nil, nil)
+
+		leagueId := "league-id-1"
+		league := League{
+			Id:             &leagueId,
+			Name:           "test-league",
+			OwnerId:        "test-owner-id",
+			OrganizationId: "test-org-id",
+			Memberships: []LeagueMembership{
+				{ID: "m1", TeamID: "team-a", MemberShipStatus: MembershipActive},
+				{ID: "m2", TeamID: "team-b", MemberShipStatus: MembershipActive},
+			},
+		}
+
+		err := season.ScheduleRounds(leagueId, league.Memberships)
+		firstRound, ok := season.FindRound(1)
+
+		assert.NoError(t, err)
+		assert.True(t, ok)
+		assert.Equal(t, 1, season.RoundCount())
+		assert.Len(t, firstRound.Matches, 1)
+		assert.Equal(t, SeasonStatusPlanned, season.CurrentStatus())
+	})
+
 	t.Run("Season with even teams without rules", func(t *testing.T) {
 		season := rehydratedSeasonForTest("id-1", "league-id-1", "Test League", SeasonStatusPending, "", 0, nil, nil, nil, nil)
 
@@ -546,6 +589,22 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("Configure playoff rules should reject two-leg final", func(t *testing.T) {
+		season := rehydratedSeasonForTest("id-1", "league-id-1", "Test League", SeasonStatusFinished, SeasonPhaseRegularSeason, 0, nil, nil, nil, nil)
+
+		updatedSeason, err := season.ConfigurePlayoffRules(PlayoffRulesSnapshot{
+			QualificationType: "top_n",
+			QualifierCount:    4,
+			Rounds: []PlayoffRoundRuleSnapshot{
+				{Name: "semifinal", Legs: 2, TiedAggregateResolution: "higher_seed_advances"},
+				{Name: "final", Legs: 2, TiedAggregateResolution: "clear_winner_required"},
+			},
+		})
+
+		assert.Error(t, err)
+		assert.Nil(t, updatedSeason)
+	})
+
 	t.Run("Generate playoff bracket should move season into playoffs", func(t *testing.T) {
 		season := rehydratedSeasonForTest("id-1", "league-id-1", "Test League", SeasonStatusFinished, SeasonPhaseRegularSeason, 0, nil, &PlayoffRulesSnapshot{
 			QualificationType: "top_n",
@@ -614,6 +673,77 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 		assert.Len(t, firstRound.Ties, 2)
 		assert.Len(t, firstRound.Ties[0].Matches, 2)
 		assert.Equal(t, "ready", firstRound.Ties[0].Status)
+	})
+
+	t.Run("Generate playoff bracket with two qualifiers should use only final round", func(t *testing.T) {
+		season := rehydratedSeasonForTest("id-1", "league-id-1", "Test League", SeasonStatusFinished, SeasonPhaseRegularSeason, 0, nil, &PlayoffRulesSnapshot{
+			QualificationType: "top_n",
+			QualifierCount:    2,
+			Rounds: []PlayoffRoundRuleSnapshot{
+				{Name: "semifinal", Legs: 2, HigherSeedHostsSecondLeg: true, TiedAggregateResolution: "higher_seed_advances"},
+				{Name: "final", Legs: 1, TiedAggregateResolution: "clear_winner_required"},
+			},
+		}, nil, nil)
+
+		updatedSeason, err := season.GeneratePlayoffBracket([]PlayoffQualifiedTeam{
+			{TeamID: "team-1", Seed: 1},
+			{TeamID: "team-2", Seed: 2},
+		})
+
+		assert.NoError(t, err)
+		assert.Len(t, updatedSeason.PlayoffBracketRounds(), 1)
+		finalRound, ok := updatedSeason.FindPlayoffRound(1)
+		assert.True(t, ok)
+		assert.Equal(t, "final", finalRound.Name)
+		assert.Len(t, finalRound.Ties, 1)
+		assert.Len(t, finalRound.Ties[0].Matches, 1)
+		assert.Equal(t, "team-1", finalRound.Ties[0].HomeTeamID)
+		assert.Equal(t, "team-2", finalRound.Ties[0].AwayTeamID)
+	})
+
+	t.Run("Generate playoff bracket with five qualifiers should assign top seeds byes", func(t *testing.T) {
+		season := rehydratedSeasonForTest("id-1", "league-id-1", "Test League", SeasonStatusFinished, SeasonPhaseRegularSeason, 0, nil, &PlayoffRulesSnapshot{
+			QualificationType: "top_n",
+			QualifierCount:    5,
+			Rounds: []PlayoffRoundRuleSnapshot{
+				{Name: "semifinal", Legs: 1, TiedAggregateResolution: "higher_seed_advances"},
+				{Name: "final", Legs: 1, TiedAggregateResolution: "clear_winner_required"},
+			},
+		}, nil, nil)
+
+		updatedSeason, err := season.GeneratePlayoffBracket([]PlayoffQualifiedTeam{
+			{TeamID: "team-1", Seed: 1},
+			{TeamID: "team-2", Seed: 2},
+			{TeamID: "team-3", Seed: 3},
+			{TeamID: "team-4", Seed: 4},
+			{TeamID: "team-5", Seed: 5},
+		})
+
+		assert.NoError(t, err)
+		assert.Len(t, updatedSeason.PlayoffBracketRounds(), 3)
+
+		openingRound, ok := updatedSeason.FindPlayoffRound(1)
+		assert.True(t, ok)
+		assert.Equal(t, "quarterfinal", openingRound.Name)
+		assert.Len(t, openingRound.Ties, 4)
+		assert.Equal(t, "finished", openingRound.Ties[0].Status)
+		assert.Equal(t, "team-1", *openingRound.Ties[0].WinnerTeamID)
+		assert.Equal(t, "team-4", openingRound.Ties[1].HomeTeamID)
+		assert.Equal(t, "team-5", openingRound.Ties[1].AwayTeamID)
+		assert.Equal(t, "ready", openingRound.Ties[1].Status)
+		assert.Equal(t, "finished", openingRound.Ties[2].Status)
+		assert.Equal(t, "team-2", *openingRound.Ties[2].WinnerTeamID)
+		assert.Equal(t, "finished", openingRound.Ties[3].Status)
+		assert.Equal(t, "team-3", *openingRound.Ties[3].WinnerTeamID)
+
+		semifinalRound, ok := updatedSeason.FindPlayoffRound(2)
+		assert.True(t, ok)
+		assert.Equal(t, "team-1", semifinalRound.Ties[0].HomeTeamID)
+		assert.Empty(t, semifinalRound.Ties[0].AwayTeamID)
+		assert.Equal(t, "team-2", semifinalRound.Ties[1].HomeTeamID)
+		assert.Equal(t, "team-3", semifinalRound.Ties[1].AwayTeamID)
+		assert.Equal(t, "ready", semifinalRound.Ties[1].Status)
+		assert.Len(t, semifinalRound.Ties[1].Matches, 1)
 	})
 
 	t.Run("Record playoff match score should finish match", func(t *testing.T) {
@@ -686,6 +816,71 @@ func TestSeason_ScheduleRounds(t *testing.T) {
 		assert.Equal(t, "team-1", *updatedSeason.ChampionTeam())
 		assert.Equal(t, SeasonPhaseCompleted, updatedSeason.CurrentPhase())
 		assert.Equal(t, SeasonStatusFinished, updatedSeason.CurrentStatus())
+	})
+
+	t.Run("Record generated two-qualifier playoff final should complete season without extra round", func(t *testing.T) {
+		season := rehydratedSeasonForTest("id-1", "league-id-1", "Test League", SeasonStatusFinished, SeasonPhaseRegularSeason, 0, nil, &PlayoffRulesSnapshot{
+			QualificationType: "top_n",
+			QualifierCount:    2,
+			Rounds: []PlayoffRoundRuleSnapshot{
+				{Name: "semifinal", Legs: 2, HigherSeedHostsSecondLeg: true, TiedAggregateResolution: "higher_seed_advances"},
+				{Name: "final", Legs: 1, TiedAggregateResolution: "clear_winner_required"},
+			},
+		}, nil, nil)
+
+		bracketSeason, err := season.GeneratePlayoffBracket([]PlayoffQualifiedTeam{
+			{TeamID: "team-1", Seed: 1},
+			{TeamID: "team-2", Seed: 2},
+		})
+		assert.NoError(t, err)
+
+		finalRound, ok := bracketSeason.FindPlayoffRound(1)
+		assert.True(t, ok)
+		assert.Len(t, finalRound.Ties, 1)
+		assert.Len(t, finalRound.Ties[0].Matches, 1)
+
+		updatedSeason, err := bracketSeason.RecordPlayoffMatchScore(finalRound.Ties[0].ID, finalRound.Ties[0].Matches[0].ID, 2, 0)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, updatedSeason.ChampionTeam())
+		assert.Equal(t, "team-1", *updatedSeason.ChampionTeam())
+		assert.Equal(t, SeasonPhaseCompleted, updatedSeason.CurrentPhase())
+		assert.Equal(t, SeasonStatusFinished, updatedSeason.CurrentStatus())
+		assert.Len(t, updatedSeason.PlayoffBracketRounds(), 1)
+	})
+
+	t.Run("Record five-qualifier opening playoff match should advance winner into semifinal against top seed", func(t *testing.T) {
+		season := rehydratedSeasonForTest("id-1", "league-id-1", "Test League", SeasonStatusFinished, SeasonPhaseRegularSeason, 0, nil, &PlayoffRulesSnapshot{
+			QualificationType: "top_n",
+			QualifierCount:    5,
+			Rounds: []PlayoffRoundRuleSnapshot{
+				{Name: "semifinal", Legs: 1, TiedAggregateResolution: "higher_seed_advances"},
+				{Name: "final", Legs: 1, TiedAggregateResolution: "clear_winner_required"},
+			},
+		}, nil, nil)
+
+		bracketSeason, err := season.GeneratePlayoffBracket([]PlayoffQualifiedTeam{
+			{TeamID: "team-1", Seed: 1},
+			{TeamID: "team-2", Seed: 2},
+			{TeamID: "team-3", Seed: 3},
+			{TeamID: "team-4", Seed: 4},
+			{TeamID: "team-5", Seed: 5},
+		})
+		assert.NoError(t, err)
+
+		openingRound, ok := bracketSeason.FindPlayoffRound(1)
+		assert.True(t, ok)
+		playInTie := openingRound.Ties[1]
+
+		updatedSeason, err := bracketSeason.RecordPlayoffMatchScore(playInTie.ID, playInTie.Matches[0].ID, 1, 0)
+
+		assert.NoError(t, err)
+		semifinalRound, ok := updatedSeason.FindPlayoffRound(2)
+		assert.True(t, ok)
+		assert.Equal(t, "team-1", semifinalRound.Ties[0].HomeTeamID)
+		assert.Equal(t, "team-4", semifinalRound.Ties[0].AwayTeamID)
+		assert.Equal(t, "ready", semifinalRound.Ties[0].Status)
+		assert.Len(t, semifinalRound.Ties[0].Matches, 1)
 	})
 
 	t.Run("Record playoff semifinal should advance winner into final", func(t *testing.T) {

@@ -541,6 +541,107 @@ func TestSeasonService_ConfigurePlayoffRules_RejectsNonOwner(t *testing.T) {
 	}
 }
 
+func TestSeasonService_ConfigurePlayoffRules_RejectsTwoLegFinal(t *testing.T) {
+	ownerID := "owner-1"
+	orgID := "org-1"
+	leagueID := "league-1"
+	seasonID := "season-1"
+
+	seasonRepo := &fakeSeasonRepo{
+		season: rehydratedSeason(
+			seasonID,
+			leagueID,
+			"Spring",
+			seasonpkg.SeasonStatusFinished,
+			seasonpkg.SeasonPhaseRegularSeason,
+			1,
+			nil,
+			nil,
+			nil,
+			nil,
+		),
+	}
+
+	service := &SeasonService{
+		seasonRepository: seasonRepo,
+		leagueRepository: &fakeSeasonLeagueRepo{
+			league: &leaguepkg.League{Id: stringPtr(leagueID), OrganizationId: orgID},
+		},
+		organizationRepo: &fakeOrganizationRepo{
+			organizations: map[string]*organizationpkg.Organization{
+				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
+			},
+		},
+	}
+
+	err := service.ConfigurePlayoffRules(ownerID, seasonID, dtos.ConfigurePlayoffRulesDTO{
+		QualificationType: "top_n",
+		QualifierCount:    4,
+		Rounds: []dtos.ConfigurePlayoffRoundDTO{
+			{Name: "semifinal", Legs: 2, TiedAggregateResolution: "higher_seed_advances"},
+			{Name: "final", Legs: 2, TiedAggregateResolution: "clear_winner_required"},
+		},
+	})
+
+	if err == nil {
+		t.Fatalf("expected two-leg final playoff configuration to fail")
+	}
+}
+
+func TestSeasonService_PlanSchedule_WithActiveLeagueMembershipsSucceeds(t *testing.T) {
+	ownerID := "owner-1"
+	orgID := "org-1"
+	leagueID := "league-1"
+	seasonID := "season-1"
+
+	seasonRepo := &fakeSeasonRepo{
+		season: rehydratedSeason(
+			seasonID,
+			leagueID,
+			"Spring",
+			seasonpkg.SeasonStatusPending,
+			seasonpkg.SeasonPhaseRegularSeason,
+			1,
+			nil,
+			nil,
+			nil,
+			nil,
+		),
+	}
+
+	service := &SeasonService{
+		seasonRepository: seasonRepo,
+		leagueRepository: &fakeSeasonLeagueRepo{
+			league: &leaguepkg.League{
+				Id:             stringPtr(leagueID),
+				OrganizationId: orgID,
+				Memberships: []leaguepkg.Membership{
+					{ID: "m1", TeamID: "team-1", MemberShipStatus: leaguepkg.MembershipActive},
+					{ID: "m2", TeamID: "team-2", MemberShipStatus: leaguepkg.MembershipActive},
+					{ID: "m3", TeamID: "team-3", MemberShipStatus: leaguepkg.MembershipActive},
+				},
+			},
+		},
+		organizationRepo: &fakeOrganizationRepo{
+			organizations: map[string]*organizationpkg.Organization{
+				orgID: {ID: stringPtr(orgID), Name: "Org", OrganizationOwnerId: ownerID},
+			},
+		},
+	}
+
+	err := service.PlanSchedule(ownerID, seasonID)
+	if err != nil {
+		t.Fatalf("expected planning to succeed with active memberships, got %v", err)
+	}
+
+	if len(seasonRepo.season.PlannedRounds()) == 0 {
+		t.Fatalf("expected planned rounds to be created")
+	}
+	if seasonRepo.season.CurrentStatus() != seasonpkg.SeasonStatusPlanned {
+		t.Fatalf("expected season status to be planned, got %s", seasonRepo.season.CurrentStatus())
+	}
+}
+
 func cloneLeague(in *leaguepkg.League) *leaguepkg.League {
 	if in == nil {
 		return nil

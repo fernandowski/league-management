@@ -55,6 +55,8 @@ func (sc *SeasonController) AddNewSeasonToLeague(ctx iris.Context) {
 func (sc *SeasonController) Search(ctx iris.Context) {
 
 	searchTerm := ctx.URLParamDefault("term", "")
+	status := ctx.URLParamDefault("status", "")
+	phase := ctx.URLParamDefault("phase", "")
 
 	leagueId := ctx.Params().GetDefault("league_id", "").(string)
 	if leagueId == "" {
@@ -84,6 +86,8 @@ func (sc *SeasonController) Search(ctx iris.Context) {
 
 	var searchDTO = dtos.SearchSeasonDTO{
 		LeagueId: leagueId,
+		Status:   status,
+		Phase:    phase,
 		BaseSearchDTO: dtos.BaseSearchDTO{
 			Term:   searchTerm,
 			Limit:  limit,
