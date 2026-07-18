@@ -5,19 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"league-management/internal/organization_management/domain/team"
+	accessdomain "league-management/internal/access_management/domain"
+	accesspg "league-management/internal/access_management/infrastructure/repositories/postgres"
+	teampkg "league-management/internal/organization_management/domain/team"
 	"league-management/internal/shared/database"
 	"strings"
 )
 
 type TeamRepository struct {
+	accessRepository *accesspg.AccessRepository
 }
 
 func NewTeamRepository() *TeamRepository {
-	return &TeamRepository{}
+	return &TeamRepository{accessRepository: accesspg.NewAccessRepository()}
 }
 
-func (tr *TeamRepository) Save(team *team.Team) error {
+func (tr *TeamRepository) Save(team *teampkg.Team) error {
 	return database.WithTx(context.Background(), func(tx pgx.Tx) error {
 		sql := "INSERT INTO league_management.teams (name) VALUES ($1) RETURNING id"
 
@@ -40,11 +43,25 @@ func (tr *TeamRepository) Save(team *team.Team) error {
 			}
 		}
 
-		return nil
+		teamId := teampkg.TeamId(newTeamId)
+		team.ID = &teamId
+
+		relationship, err := accessdomain.NewResourceRelationship(
+			accessdomain.ResourceTeam,
+			newTeamId,
+			accessdomain.RelationParent,
+			accessdomain.SubjectOrganization,
+			team.OrganizationId,
+		)
+		if err != nil {
+			return err
+		}
+
+		return tr.accessRepository.RecordResourceRelationshipTx(context.Background(), tx, relationship)
 	})
 }
 
-func (tr *TeamRepository) FindById(teamId string) (*team.Team, error) {
+func (tr *TeamRepository) FindById(teamId string) (*teampkg.Team, error) {
 	connection := database.GetConnection()
 
 	sql := `
@@ -70,24 +87,31 @@ func (tr *TeamRepository) FindById(teamId string) (*team.Team, error) {
 	defer rows.Close()
 
 	var id, teamName, organizationId string
-	var roles = make(map[string]team.TeamRole)
+	var roles = make(map[string]teampkg.TeamRole)
 
-	if !rows.Next() {
-		return nil, errors.New("team does not exist")
-	}
-
+	found := false
 	for rows.Next() {
-		var roleUserId string
-		var userRole string
+		found = true
+		var roleUserId *string
+		var userRole *string
 		if err := rows.Scan(&id, &teamName, &organizationId, &roleUserId, &userRole); err != nil {
 			return nil, err
 		}
-		roles[roleUserId] = team.TeamRole(userRole)
+		if roleUserId != nil && userRole != nil {
+			roles[*roleUserId] = teampkg.TeamRole(*userRole)
+		}
 	}
 
-	return &team.Team{
-		ID:             (*team.TeamId)(&teamId),
-		Name:           team.TeamName(teamName),
+	if !found {
+		return nil, errors.New("team does not exist")
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return &teampkg.Team{
+		ID:             (*teampkg.TeamId)(&teamId),
+		Name:           teampkg.TeamName(teamName),
 		OrganizationId: organizationId,
 		Roles:          roles,
 	}, nil
@@ -136,7 +160,7 @@ func (tr *TeamRepository) Search(organizationId, userId, searchTerm string) []in
 	return results
 }
 
-func upsertTeamOwnersTx(tx pgx.Tx, teamId string, owners map[string]team.TeamRole) error {
+func upsertTeamOwnersTx(tx pgx.Tx, teamId string, owners map[string]teampkg.TeamRole) error {
 	var totalValues = len(owners)
 	var values = make([]string, totalValues)
 

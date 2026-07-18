@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	accessdomain "league-management/internal/access_management/domain"
+	accesspg "league-management/internal/access_management/infrastructure/repositories/postgres"
 	"league-management/internal/organization_management/domain/league"
 	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/database"
@@ -15,10 +17,11 @@ import (
 )
 
 type LeagueRepository struct {
+	accessRepository *accesspg.AccessRepository
 }
 
 func NewLeagueRepository() *LeagueRepository {
-	return &LeagueRepository{}
+	return &LeagueRepository{accessRepository: accesspg.NewAccessRepository()}
 }
 
 func (lr *LeagueRepository) FindById(leagueId string) (*league.League, error) {
@@ -129,11 +132,11 @@ func (lr *LeagueRepository) WithLockedLeague(leagueId string, fn func(league *le
 func (lr *LeagueRepository) Save(league *league.League) error {
 	updateID := *league.Id
 	if updateID == "" {
-		if err := insertIntoLeagues(league); err != nil {
+		if err := lr.insertIntoLeagues(league); err != nil {
 			return err
 		}
 	} else {
-		if err := updateLeague(league); err != nil {
+		if err := lr.updateLeague(league); err != nil {
 			return err
 		}
 	}
@@ -141,26 +144,38 @@ func (lr *LeagueRepository) Save(league *league.League) error {
 	return nil
 }
 
-func insertIntoLeagues(league *league.League) error {
-	connection := database.GetConnection()
+func (lr *LeagueRepository) insertIntoLeagues(league *league.League) error {
+	return database.WithTx(context.Background(), func(tx pgx.Tx) error {
+		sql := `INSERT INTO league_management.leagues (name, user_id, organization_id) VALUES ($1, $2, $3) RETURNING id;`
 
-	sql := `INSERT INTO leagues (name, user_id, organization_id) VALUES ($1, $2, $3);`
-
-	_, err := connection.Exec(context.Background(), sql, league.Name, league.OwnerId, league.OrganizationId)
-
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return app_errors.ErrDuplicateResource
+		var leagueID string
+		err := tx.QueryRow(context.Background(), sql, league.Name, league.OwnerId, league.OrganizationId).Scan(&leagueID)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				return app_errors.ErrDuplicateResource
+			}
+			return err
 		}
-		return err
-	}
 
-	return nil
+		league.Id = &leagueID
+		relationship, err := accessdomain.NewResourceRelationship(
+			accessdomain.ResourceLeague,
+			leagueID,
+			accessdomain.RelationParent,
+			accessdomain.SubjectOrganization,
+			league.OrganizationId,
+		)
+		if err != nil {
+			return err
+		}
+
+		return lr.accessRepository.RecordResourceRelationshipTx(context.Background(), tx, relationship)
+	})
 }
 
-func updateLeague(league *league.League) error {
-	return (&LeagueRepository{}).saveTx(context.Background(), database.GetConnection(), league)
+func (lr *LeagueRepository) updateLeague(league *league.League) error {
+	return lr.saveTx(context.Background(), database.GetConnection(), league)
 }
 
 func (lr *LeagueRepository) saveTx(ctx context.Context, tx interface {

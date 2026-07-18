@@ -5,6 +5,8 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	accessdomain "league-management/internal/access_management/domain"
+	accesspg "league-management/internal/access_management/infrastructure/repositories/postgres"
 	"league-management/internal/organization_management/domain/organization"
 	"league-management/internal/shared/app_errors"
 	"league-management/internal/shared/database"
@@ -12,10 +14,11 @@ import (
 )
 
 type OrganizationRepository struct {
+	accessRepository *accesspg.AccessRepository
 }
 
 func NewOrganizationRepository() *OrganizationRepository {
-	return &OrganizationRepository{}
+	return &OrganizationRepository{accessRepository: accesspg.NewAccessRepository()}
 }
 
 func (or *OrganizationRepository) FindByName(orgName string, ownerID string) (*organization.Organization, error) {
@@ -66,19 +69,33 @@ func (or *OrganizationRepository) FindById(orgId string) (*organization.Organiza
 }
 
 func (ur *OrganizationRepository) Save(o *organization.Organization) error {
-	pool := database.GetConnection()
+	return database.WithTx(context.Background(), func(tx pgx.Tx) error {
+		sql := "INSERT INTO league_management.organizations (name, user_id) VALUES ($1, $2) RETURNING id"
 
-	sql := "INSERT INTO league_management.organizations (name, user_id) VALUES ($1, $2)"
-
-	_, err := pool.Exec(context.Background(), sql, o.Name, o.OrganizationOwnerId)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return app_errors.ErrDuplicateResource
+		var organizationID string
+		err := tx.QueryRow(context.Background(), sql, o.Name, o.OrganizationOwnerId).Scan(&organizationID)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				return app_errors.ErrDuplicateResource
+			}
+			return err
 		}
-	}
 
-	return err
+		o.ID = &organizationID
+		relationship, err := accessdomain.NewResourceRelationship(
+			accessdomain.ResourceOrganization,
+			organizationID,
+			accessdomain.RelationOwner,
+			accessdomain.SubjectUser,
+			o.OrganizationOwnerId,
+		)
+		if err != nil {
+			return err
+		}
+
+		return ur.accessRepository.RecordResourceRelationshipTx(context.Background(), tx, relationship)
+	})
 }
 
 func (ur *OrganizationRepository) FetchAll(orgOwnerId string) ([]organization.Organization, error) {
