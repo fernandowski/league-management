@@ -188,6 +188,22 @@ For any concurrency decision, agents must follow:
     - Idempotency
 4. Why is this better than alternatives?
 
+# Backend App Rules
+
+This app is written in Go.
+
+When working here:
+- Prefer idiomatic Go.
+- Use table-driven tests.
+- Keep domain logic separate from infrastructure.
+- Do not leak database models into domain models.
+- Keep context.Context out of domain objects.
+- Use repositories at application/infrastructure boundaries.
+
+## Learning Mode Override
+
+For Go work, prefer coaching over implementation.
+Ask the user to implement small steps first.
 ---
 
 # 📌 Summary
